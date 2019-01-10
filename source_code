@@ -1,0 +1,3679 @@
+######################################
+#  去除表达谱中<2/3样本不表达的基因  # 1
+######################################
+rm(list = ls())
+setwd("f:/datahe")
+count0 <- function(x){
+  sum(x == 0)
+}
+#----mRNA----#
+#TCGAliolinks中下载的FPKM数据，去除所有样本不表达的基因。
+RNA <- read.table("e:/siyu/Gene_FPKM/LUAD_Gene_FPKM.txt",header=T,sep="\t",row.names = 1)
+colnames(RNA) <- substr(colnames(RNA),1,15)
+RNA <- RNA[,grep("01$",colnames(RNA))]
+RNA <- RNA[,!colnames(RNA) %in% unique(substr(colnames(RNA)[grep("\\..$",colnames(RNA))],1,15))]
+RNA <- RNA[,-grep("\\..$",colnames(RNA))]
+num0 <- apply(RNA,1,count0)
+RNA <- RNA[num0 < dim(RNA)[2]*(2/3),]
+write.table(RNA,"2/mRNA-LUAD.txt",quote=F,sep="\t")
+
+#----lncRNA----#
+RNA <- read.table("2/lncRNAcancer/source/TCGA-LUAD-rnaexpr.tsv",header=T,sep="\t",row.names = 1)
+RNA <- RNA[,grep("LUAD.Tumor",colnames(RNA))]
+colnames(RNA) <- substr(colnames(RNA),12,27)
+num0 <- apply(RNA,1,count0)
+RNA <- RNA[num0 < dim(RNA)[2]*(2/3),]
+write.table(RNA,"2/lncRNA-LUAD.txt",quote=F,sep="\t")
+
+
+#----miRNA----#
+miRNA <- read.table("e:/siyu/miRNA_RPKM/LUAD_miRNA_RPKM.txt",header=T,sep="\t",row.names = 1)
+colnames(miRNA) <- substr(colnames(miRNA),1,15)
+miRNA <- miRNA[,grep("01$",colnames(miRNA))]
+miRNA <- miRNA[,!colnames(miRNA) %in% unique(substr(colnames(miRNA)[grep("\\..$",colnames(miRNA))],1,15))]
+miRNA <- miRNA[,-grep("\\..$",colnames(miRNA))]
+num0 <- apply(miRNA,1,count0)
+miRNA <- miRNA[num0 < dim(miRNA)[2]*(2/3),]
+write.table(miRNA,"2/miRNA-LUAD.txt",quote=F,sep="\t")
+
+
+rm(list = ls())
+setwd("f:/datahe")
+count0 <- function(x){
+  sum(x == 0)
+}
+RNA <- read.table("2/lncRNA-LUAD.txt",sep = "\t",header = T)
+num0 <- apply(RNA,1,count0)
+RNA$num0 <- num0
+write.table(RNA,file = "2/lncRNA-LUAD1.txt",sep = "\t",col.names = T,row.names = T,quote = F)
+
+RNA <- read.table("2/miRNA-LUAD.txt",sep = "\t",header = T)
+num0 <- apply(RNA,1,count0)
+RNA$num0 <- num0
+write.table(RNA,file = "2/miRNA-LUAD1.txt",sep = "\t",col.names = T,row.names = T,quote = F)
+
+RNA <- read.table("2/mRNA-LUAD.txt",sep = "\t",header = T)
+num0 <- apply(RNA,1,count0)
+RNA$num0 <- num0
+write.table(RNA,file = "2/mRNA-LUAD1.txt",sep = "\t",col.names = T,row.names = T,quote = F)
+
+
+## 去除表达都<1的基因
+rm(list = ls())
+setwd("f:/datahe")
+library(ggplot2)
+library("reshape2")
+count1 <- function(x){
+  sum(x < 1)
+}
+RNA <- read.table("2/lncRNA-LUAD.txt",sep = "\t",header = T)
+num1 <- apply(RNA,1,count1)
+RNA1 <- RNA[num1 == 0,]
+
+
+write.table(RNA1,file = "2/lncRNA-LUAD1.txt",sep = "\t",col.names = T,row.names = T,quote = F)
+
+
+## miRNA
+RNA <- read.table("2/miRNA-LUAD.txt",sep = "\t",header = T)
+num1 <- apply(RNA,1,count1)
+RNA1 <- RNA[num1 != dim(RNA)[2],]
+RNA1$gene <- rownames(RNA1)
+RNA1 <- melt(RNA1,id = "gene")
+p <- ggplot(RNA1,aes(x = gene, y = value))
+p + geom_boxplot() + 
+  theme(axis.text.x = element_text(size = 5,angle = 90),axis.text.y = element_text(size = 10),
+        panel.background = NULL)
+ggsave("2/plot/miRNA1.pdf",width = 15,height = 7)
+
+RNA1[RNA1 == 0] = 0.001
+
+write.table(RNA1,file = "2/miRNA-LUAD1.txt",sep = "\t",col.names = T,row.names = T,quote = F)
+
+
+
+
+RNA2 <- RNA[num1 >= dim(RNA)[2]*(2/3),]
+RNA2$gene <- rownames(RNA2)
+RNA2 <- melt(RNA2,id = "gene")
+p <- ggplot(RNA2,aes(x = gene, y = value))
+p + geom_boxplot() + 
+  theme(axis.text.x = element_text(size = 5,angle = 90),axis.text.y = element_text(size = 10),
+        panel.background = NULL)
+ggsave("2/plot/miRNA2.pdf",width = 40,height = 7)
+
+## mRNA
+RNA <- read.table("2/mRNA-LUAD.txt",sep = "\t",header = T)
+num1 <- apply(RNA,1,count1)
+RNA1 <- RNA[num1 != dim(RNA)[2],]
+RNA1$gene <- rownames(RNA1)
+for (i in 1:ceiling(dim(RNA1)[1]/200)){
+  if (i*200 <= dim(RNA1)[1]){
+    RNA11 <- melt(RNA1[(i*200-199):(i*200),],id = "gene")
+  }else{RNA11 <- melt(RNA1[(i*200-199):dim(RNA1)[1],],id = "gene")}
+  p <- ggplot(RNA11,aes(x = gene, y = value))
+  p + geom_boxplot() + 
+    theme(axis.text.x = element_text(size = 5,angle = 90),axis.text.y = element_text(size = 10),
+          panel.background = NULL)
+  ggsave(paste0("2/plot/mRNA1",i,".pdf"),width = 15,height = 7,limitsize = FALSE)
+}
+
+write.table(RNA1,file = "2/mRNA-LUAD1.txt",sep = "\t",col.names = T,row.names = T,quote = F)
+
+RNA2 <- RNA[num1 != 0,]
+RNA2$gene <- rownames(RNA2)
+for (i in 1:ceiling(dim(RNA2)[1]/200)){
+  if (i*200 <= dim(RNA2)[1]){
+    RNA21 <- melt(RNA2[(i*200-199):(i*200),],id = "gene")
+  }else{RNA21 <- melt(RNA2[(i*200-199):dim(RNA2)[1],],id = "gene")}
+  p <- ggplot(RNA21,aes(x = gene, y = value))
+  p + geom_boxplot() + 
+    theme(axis.text.x = element_text(size = 5,angle = 90),axis.text.y = element_text(size = 10),
+          panel.background = NULL)
+  ggsave(paste0("2/plot/mRNA2",i,".pdf"),width = 15,height = 7,limitsize = FALSE)
+}
+## 对样本处理
+lncRNA <- read.table("2/lncRNA-LUAD.txt",sep = "\t",header = T)
+lncRNA<- lncRNA[,as.character(clinic_data$sampleID)]
+write.table(lncRNA,"2/lncRNA-LUAD.txt",sep = "\t",col.names = T,row.names = T,quote = F)
+miRNA <- read.table("2/miRNA-LUAD1.txt",sep = "\t",header = T)
+colnames(miRNA) <- gsub("\\.01$","",colnames(miRNA))
+miRNA<- miRNA[,as.character(clinic_data$sampleID)]
+write.table(miRNA,"2/miRNA-LUAD1.txt",sep = "\t",col.names = T,row.names = T,quote = F)
+mRNA <- read.table("2/mRNA-LUAD1.txt",sep = "\t",header = T)
+colnames(mRNA) <- gsub("\\.01$","",colnames(mRNA))
+mRNA<- mRNA[,as.character(clinic_data$sampleID)]
+write.table(mRNA,"2/mRNA-LUAD1.txt",sep = "\t",col.names = T,row.names = T,quote = F)
+######################
+# 对临床样本进行分类 # 2
+######################
+#将患者样本分为训练集和测试集，训练集为总数的80%，测试集为总数的20%
+
+for(cancer in list.files('d:/data/CNV-Cancer Browser')){
+  clinic_data<-read.table(paste('f:/datahe/CNV-Cancer Browser/LUAD/clinical_data.txt',sep=''),sep='\t',head=T)
+  clinic_data$sampleID <- gsub("\\.01","",gsub("-","\\.",clinic_data$sampleID))
+  lncRNA <- read.table("2/lncRNA-LUAD.txt",sep = "\t",header = T)
+  miRNA <- read.table("2/miRNA-LUAD1.txt",sep = "\t",header = T)
+  mRNA <- read.table("2/mRNA-LUAD1.txt",sep = "\t",header = T)
+  clinic_data <- clinic_data[clinic_data$sampleID %in% intersect(colnames(lncRNA),gsub("\\.01","",intersect(colnames(miRNA),colnames(mRNA)))),]
+  sample <- sample(nrow(clinic_data),nrow(clinic_data)*0.2)
+  clinic_test_set <- clinic_data[sample,]#测试集：总患者样本的20%
+  clinic_train_set <- clinic_data[-sample,]#试验集：总患者样本的80%
+  write.table(clinic_test_set,paste('f:/datahe/CNV-Cancer Browser/LUAD/clinical_test_set55.txt',sep=''),row.names=F,quote=F,sep='\t')
+  write.table(clinic_train_set,paste('f:/datahe/CNV-Cancer Browser/LUAD/clinical_train_set55.txt',sep=''),row.names=F,quote=F,sep='\t')
+}
+# 对生存时间处理
+setwd("f:/datahe")
+for (m in list.files("CNV-Cancer Browser")) {
+  clinic <- read.table(paste("CNV-Cancer Browser/",m,"/clinical_data",sep = ""),header = T,sep = "\t")
+  clinic1 <- data.frame(sampleID = clinic$sampleID,
+                        X_EVENT = clinic$X_EVENT,
+                        time = clinic$days_to_death,
+                        last_followup = clinic$days_to_last_followup)
+  clinic1$time[is.na(clinic1$time)] = clinic1$last_followup[is.na(clinic1$time)]
+  clinic1 = clinic1[,-4]
+  clinic1$time = clinic1$time/30
+  clinic1 = clinic1[!is.na(clinic1$time),]
+  
+  sample <- as.character(clinic1[sample(clinic1[,1],floor(length(clinic1[,1])*0.8)),1])
+  sample <- ifelse(clinic1[,1] %in% sample,1,2)
+  clinic1_train <- clinic1[which(sample == 1),]
+  clinic1_test <- clinic1[which(sample == 2),]
+  write.table(clinic1,file = paste("CNV-Cancer Browser/",m,"/clinical_data.txt",sep = ""),sep = "\t",quote = F,row.names = F)
+  write.table(clinic1_train,file = paste("CNV-Cancer Browser/",m,"/clinical_train_set.txt",sep = ""),sep = "\t",quote = F,row.names = F)
+  write.table(clinic1_test,file = paste("CNV-Cancer Browser/",m,"/clinical_test_set.txt",sep = ""),sep = "\t",quote = F,row.names = F)
+}
+
+
+
+setwd("f:/datahe")
+cancer <- list.files("CNV-Cancer Browser")
+for (m in cancer){
+  clinic <- read.table(paste("CNV-Cancer Browser/",m,"/clinical_data.txt",sep = ""),header = T,sep = "\t",row.names = 1)
+  clinic_train <- read.table(paste("CNV-Cancer Browser/",m,"/clinical_train_set.txt",sep = ""),header = T,sep = "\t",row.names = 1)
+  clinic_test <- rownames(clinic) %in% rownames(clinic_train)
+  clinic_test <- clinic[clinic_test=="FALSE",]
+  write.table(clinic_test,paste("CNV-Cancer Browser/",m,"/clinical_test_set.txt",sep = ""),quote = F,sep = "\t")
+}
+
+##################
+#  分高低表达组  # 3
+##################
+#输出：每个癌症一个文件夹，每个基因为一个文件，文件中为此基因的样本，样本分为高低风险分别为1,0
+rm(list = ls())
+setwd( "f:/datahe")
+clinic <- read.table(paste("CNV-Cancer Browser/LUAD/clinical_train_set64.txt",sep=""),sep="\t",header=T)
+sample <- as.character(clinic$sampleID)#55
+#----lncRNA----#
+#按lncRNA表达的中值作为高低风险分类
+#lncRNA为esmble id
+
+gene <- read.table("2/lncRNA-LUAD.txt",header = T,sep = "\t",row.names = 1)
+for (i in rownames(gene)){
+  geneexpr <- as.numeric(gene[i,sample])
+  class1 <- colnames(gene)[geneexpr <= median(geneexpr)]
+  class2 <- colnames(gene)[geneexpr > median(geneexpr)]
+  #class1 <- colnames(gene)[order(gene[i,])[1:(dim(gene)[2]/2)]]
+  #class2 <- colnames(gene)[order(gene[i,])[((dim(gene)[2]/2+1):dim(gene)[2])]]
+  write.table(data.frame(sample = c(class1,class2),class = c(rep(0,length(class1)),rep(1,length(class2)))),
+              paste("3/lncRNA/zhongzhi/0=2.3/LUAD64/",i,".txt",sep=""),sep="\t",quote=F,row.names = F)
+}
+
+
+#----mRNA----#
+#按mRNA表达的中值作为高低风险分类
+#每个癌症一个文件夹，每个基因为一个文件，文件中为此基因的样本，样本分为高低风险分别为1,0
+#由于14中癌症数据格式不同，所以分开计算
+gene <- read.table("2/mRNA-LUAD1.txt",header = T,sep = "\t",row.names = 1)
+for(i in rownames(gene)){
+  geneexpr <- as.numeric(gene[i,sample])
+  class1 <- colnames(gene)[geneexpr <= median(geneexpr)]
+  class2 <- colnames(gene)[geneexpr > median(geneexpr)]
+  #class1 <- colnames(gene)[order(gene[i,])[1:(dim(gene)[2]/2)]]
+  #class2 <- colnames(gene)[order(gene[i,])[((dim(gene)[2]/2+1):dim(gene)[2])]]
+  write.table(data.frame(sample = c(class1,class2),class = c(rep(0,length(class1)),rep(1,length(class2)))),
+              paste("3/mRNA/zhongzhi/LUAD64/",gsub("\\?\\|","__",i),".txt",sep=""),sep="\t",quote=F,row.names = F)
+}
+
+
+#----miRNA----#
+#按miRNA表达的中值作为高低风险分类
+#每个癌症一个文件夹，每个基因为一个文件，文件中为此基因的样本，样本分为高低风险分别为1,0
+#cancer=c("BLCA","BRCA","CESC","HNSC","KICH","KIRC","KIRP","LIHC","LUAD","LUSC","PRAD","STAD","THCA","UCEC")
+gene <- read.table("2/miRNA-LUAD1.txt",header = T,sep = "\t",row.names = 1)
+for(i in rownames(gene)){
+  geneexpr <- as.numeric(gene[i,sample])
+  class1 <- colnames(gene)[geneexpr <= median(geneexpr)]
+  class2 <- colnames(gene)[geneexpr > median(geneexpr)]
+  #class1 <- colnames(gene)[order(gene[i,])[1:(dim(gene)[2]/2)]]
+  #class2 <- colnames(gene)[order(gene[i,])[((dim(gene)[2]/2+1):dim(gene)[2])]]
+  write.table(data.frame(sample = c(class1,class2),class = c(rep(0,length(class1)),rep(1,length(class2)))),
+              paste("3/miRNA/zhongzhi/0=2.3/LUAD64/",gsub("/","__",i),".txt",sep=""),sep="\t",quote=F,row.names=F)
+}
+
+##################
+#输出：每个癌症一个文件夹，每个基因为一个文件，文件中为此基因的样本，样本分为高低风险分别为1,0
+rm(list = ls())
+setwd( "f:/datahe")
+clinic <- read.table(paste("CNV-Cancer Browser/LUAD/clinical_train_set73.txt",sep=""),sep="\t",header=T)
+sample <- as.character(clinic$sampleID)
+#----lncRNA----#
+#按lncRNA表达的中值作为高低风险分类
+#lncRNA为esmble id
+
+gene <- read.table("2/lncRNA-LUAD.txt",header = T,sep = "\t",row.names = 1)
+for (i in rownames(gene)){
+  geneexpr <- as.numeric(gene[i,sample])
+  class1 <- colnames(gene)[geneexpr <= median(geneexpr)]
+  class2 <- colnames(gene)[geneexpr > median(geneexpr)]
+  #class1 <- colnames(gene)[order(gene[i,])[1:(dim(gene)[2]/2)]]
+  #class2 <- colnames(gene)[order(gene[i,])[((dim(gene)[2]/2+1):dim(gene)[2])]]
+  write.table(data.frame(sample = c(class1,class2),class = c(rep(0,length(class1)),rep(1,length(class2)))),
+              paste("3/lncRNA/zhongzhi/0=2.3/LUAD73/",i,".txt",sep=""),sep="\t",quote=F,row.names = F)
+}
+
+
+#----mRNA----#
+#按mRNA表达的中值作为高低风险分类
+#每个癌症一个文件夹，每个基因为一个文件，文件中为此基因的样本，样本分为高低风险分别为1,0
+#由于14中癌症数据格式不同，所以分开计算
+gene <- read.table("2/mRNA-LUAD1.txt",header = T,sep = "\t",row.names = 1)
+for(i in rownames(gene)){
+  geneexpr <- as.numeric(gene[i,sample])
+  class1 <- colnames(gene)[geneexpr <= median(geneexpr)]
+  class2 <- colnames(gene)[geneexpr > median(geneexpr)]
+  #class1 <- colnames(gene)[order(gene[i,])[1:(dim(gene)[2]/2)]]
+  #class2 <- colnames(gene)[order(gene[i,])[((dim(gene)[2]/2+1):dim(gene)[2])]]
+  write.table(data.frame(sample = c(class1,class2),class = c(rep(0,length(class1)),rep(1,length(class2)))),
+              paste("3/mRNA/zhongzhi/LUAD73/",gsub("\\?\\|","__",i),".txt",sep=""),sep="\t",quote=F,row.names = F)
+}
+
+
+#----miRNA----#
+#按miRNA表达的中值作为高低风险分类
+#每个癌症一个文件夹，每个基因为一个文件，文件中为此基因的样本，样本分为高低风险分别为1,0
+#cancer=c("BLCA","BRCA","CESC","HNSC","KICH","KIRC","KIRP","LIHC","LUAD","LUSC","PRAD","STAD","THCA","UCEC")
+gene <- read.table("2/miRNA-LUAD1.txt",header = T,sep = "\t",row.names = 1)
+for(i in rownames(gene)){
+  geneexpr <- as.numeric(gene[i,sample])
+  class1 <- colnames(gene)[geneexpr <= median(geneexpr)]
+  class2 <- colnames(gene)[geneexpr > median(geneexpr)]
+  #class1 <- colnames(gene)[order(gene[i,])[1:(dim(gene)[2]/2)]]
+  #class2 <- colnames(gene)[order(gene[i,])[((dim(gene)[2]/2+1):dim(gene)[2])]]
+  write.table(data.frame(sample = c(class1,class2),class = c(rep(0,length(class1)),rep(1,length(class2)))),
+              paste("3/miRNA/zhongzhi/0=2.3/LUAD73/",gsub("/","__",i),".txt",sep=""),sep="\t",quote=F,row.names=F)
+}
+
+
+##################
+#输出：每个癌症一个文件夹，每个基因为一个文件，文件中为此基因的样本，样本分为高低风险分别为1,0
+rm(list = ls())
+setwd( "f:/datahe")
+clinic <- read.table(paste("CNV-Cancer Browser/LUAD/clinical_train_set82.txt",sep=""),sep="\t",header=T)
+sample <- as.character(clinic$sampleID)
+#----lncRNA----#
+#按lncRNA表达的中值作为高低风险分类
+#lncRNA为esmble id
+
+gene <- read.table("2/lncRNA-LUAD.txt",header = T,sep = "\t",row.names = 1)
+for (i in rownames(gene)){
+  geneexpr <- as.numeric(gene[i,sample])
+  class1 <- colnames(gene)[geneexpr <= median(geneexpr)]
+  class2 <- colnames(gene)[geneexpr > median(geneexpr)]
+  #class1 <- colnames(gene)[order(gene[i,])[1:(dim(gene)[2]/2)]]
+  #class2 <- colnames(gene)[order(gene[i,])[((dim(gene)[2]/2+1):dim(gene)[2])]]
+  write.table(data.frame(sample = c(class1,class2),class = c(rep(0,length(class1)),rep(1,length(class2)))),
+              paste("3/lncRNA/zhongzhi/0=2.3/LUAD82/",i,".txt",sep=""),sep="\t",quote=F,row.names = F)
+}
+
+
+#----mRNA----#
+#按mRNA表达的中值作为高低风险分类
+#每个癌症一个文件夹，每个基因为一个文件，文件中为此基因的样本，样本分为高低风险分别为1,0
+#由于14中癌症数据格式不同，所以分开计算
+gene <- read.table("2/mRNA-LUAD1.txt",header = T,sep = "\t",row.names = 1)
+for(i in rownames(gene)){
+  geneexpr <- as.numeric(gene[i,sample])
+  class1 <- colnames(gene)[geneexpr <= median(geneexpr)]
+  class2 <- colnames(gene)[geneexpr > median(geneexpr)]
+  #class1 <- colnames(gene)[order(gene[i,])[1:(dim(gene)[2]/2)]]
+  #class2 <- colnames(gene)[order(gene[i,])[((dim(gene)[2]/2+1):dim(gene)[2])]]
+  write.table(data.frame(sample = c(class1,class2),class = c(rep(0,length(class1)),rep(1,length(class2)))),
+              paste("3/mRNA/zhongzhi/LUAD82/",gsub("\\?\\|","__",i),".txt",sep=""),sep="\t",quote=F,row.names = F)
+}
+
+
+#----miRNA----#
+#按miRNA表达的中值作为高低风险分类
+#每个癌症一个文件夹，每个基因为一个文件，文件中为此基因的样本，样本分为高低风险分别为1,0
+#cancer=c("BLCA","BRCA","CESC","HNSC","KICH","KIRC","KIRP","LIHC","LUAD","LUSC","PRAD","STAD","THCA","UCEC")
+gene <- read.table("2/miRNA-LUAD1.txt",header = T,sep = "\t",row.names = 1)
+for(i in rownames(gene)){
+  geneexpr <- as.numeric(gene[i,sample])
+  class1 <- colnames(gene)[geneexpr <= median(geneexpr)]
+  class2 <- colnames(gene)[geneexpr > median(geneexpr)]
+  #class1 <- colnames(gene)[order(gene[i,])[1:(dim(gene)[2]/2)]]
+  #class2 <- colnames(gene)[order(gene[i,])[((dim(gene)[2]/2+1):dim(gene)[2])]]
+  write.table(data.frame(sample = c(class1,class2),class = c(rep(0,length(class1)),rep(1,length(class2)))),
+              paste("3/miRNA/zhongzhi/0=2.3/LUAD82/",gsub("/","__",i),".txt",sep=""),sep="\t",quote=F,row.names=F)
+}
+
+
+
+##################
+#  表达谱分类图  #
+##################
+#----lncRNA高低分类图----#
+
+rm(list = ls())
+setwd("f:/datahe")
+cancer = c("BLCA","BRCA","LIHC","LUAD","LUSC","STAD")
+#cancer=list.files("f:/datahe/CNV-Cancer Browser/")
+for (i in cancer){
+  lncRNA <- read.table(paste("2/lncRNAcancer/0=1.3/",i,sep=""),header = T,sep = "\t",row.names = 1)
+  png(paste("picture/高低分类/lncRNA/",i,".png",sep=""),
+      width=600,height=600,family="GB1")
+  par(mfrow = c(2,2))
+  for (m in rownames(lncRNA)[1:4]){
+    expr <- as.numeric(sort(lncRNA[m,grep("Tumor",colnames(lncRNA))]))
+    
+    #画图
+    plot(expr,type="p",main=paste("lncRNA of ",i," gene expression",sep=""),pch=20,
+         xlab="Samples",ylab="Samples expression",sub=m,
+         bty="l",axes=F)
+    axis(2,0:(max(expr)+1))
+    abline(v=(length(expr)/2),col="palegoldenrod",lwd=2)
+    rug(1:(length(expr)/2),col="springgreen3")
+    rug((length(expr)/2):length(expr),col="orangered3")
+    mtext("low expression",side=1,at=(length(expr)/4),col="springgreen3")
+    mtext("high expression",side=1,at=(length(expr)*3/4),col="orangered3")
+  }
+  dev.off()
+}
+
+#----miRNA高低分类图----#
+
+rm(list = ls())
+setwd("f:/datahe")
+cancer = c("BLCA","BRCA","LIHC","LUAD","LUSC","STAD")
+#cancer=list.files("f:/datahe/CNV-Cancer Browser/")
+for (i in cancer){
+  miRNA <- read.table(paste("f:/datahe/2/miRNAcancer/0=1.3/",i,sep=""),header = T,sep="\t",row.names = 1)
+  png(paste("f:/datahe/picture/高低分类/miRNA/",i,".png",sep=""),
+      width=600,height=600,family="GB1")
+  par(mfrow = c(2,2))
+  for (m in rownames(miRNA)[1:4]){
+    expr <- as.numeric(sort(miRNA[m,grep("01$",colnames(miRNA))]))
+    
+    #画图
+    plot(expr,type="p",main=paste("miRNA of ",i," gene expression",sep=""),pch=20,
+         xlab="Samples",ylab="Samples expression",sub=m,
+         bty="l",axes=F)
+    axis(2,0:(max(expr)+1))
+    abline(v=(length(expr)/2),col="palegoldenrod",lwd=2)
+    rug(1:(length(expr)/2),col="springgreen3")
+    rug((length(expr)/2):length(expr),col="orangered3")
+    mtext("low expression",side=1,at=(length(expr)/4),col="springgreen3")
+    mtext("high expression",side=1,at=(length(expr)*3/4),col="orangered3")
+  }
+  dev.off()
+}
+
+#----mRNA高低分类图----#
+
+rm(list = ls())
+setwd("f:/datahe")
+cancer = c("BLCA","BRCA","LIHC","LUAD","LUSC","STAD")
+#cancer=list.files("f:/datahe/CNV-Cancer Browser/")
+for (i in cancer){
+  mRNA <- read.table(paste("f:/datahe/2/mRNAcancer/",i,sep=""),header=T,sep="\t",row.names = 1)
+  png(paste("f:/datahe/picture/高低分类/mRNA/",i,".png",sep=""),
+      width=600,height=600,family="GB1")
+  par(mfrow=c(2,2))
+  for (m in rownames(mRNA)[1:4]){
+    expr <- as.numeric(sort(mRNA[m,grep("01$",colnames(mRNA))]))
+    
+    #画图
+    plot(expr,type="p",main=paste("mRNA of ",i," gene expression",sep=""),pch=20,
+         xlab="Samples",ylab="Samples expression",sub=m,
+         bty="l",axes=F)
+    axis(2,floor(min(expr)):ceiling(max(expr)))
+    abline(v=(length(expr)/2),col="palegoldenrod",lwd=2)
+    rug(1:(length(expr)/2),col="springgreen3")
+    rug((length(expr)/2):length(expr),col="orangered3")
+    mtext("low expression",side=1,at=(length(expr)/4),col="springgreen3")
+    mtext("high expression",side=1,at=(length(expr)*3/4),col="orangered3")
+  }
+  dev.off()
+}
+
+
+
+##################
+#  log-rank检验  # 4
+##################
+
+#----lncRNA----#
+#输出lncRNA的log-rank的p值（gene\tp值）
+
+#求lncRNA的log-rank检验的p-value
+#缺失值：在clinical_data文件中缺失的样本，分不成两类的样本
+library(survival)
+rm(list = ls())
+setwd("f:/datahe")
+#--导入的文件：临床数据：样本，性别，年龄，截尾事件,去掉正常样本
+clinic <- read.table(paste("CNV-Cancer Browser/LUAD/clinical_train_set64.txt",sep=""),sep="\t",header=T)
+p_value <- c()
+genesymbol <- c()
+#--导入的文件：lncRNA基因：1为高风险分类，0为低风险分类
+for (n in list.files("3/lncRNA/zhongzhi/0=2.3/LUAD64")){
+  gene <- read.table(paste("3/lncRNA/zhongzhi/0=2.3/LUAD64/",n,sep=""),sep="\t",header=T)
+  all.data <- merge(gene,clinic,by.x="sample",by.y="sampleID")
+  dif <- survdiff(Surv(all.data$time,all.data$X_EVENT) ~ all.data$class)#求生存时间
+  p_value <- c(p_value,pchisq(dif$chisq,1,lower.tail=F))
+  genesymbol <- c(genesymbol,gsub(".txt","",n))
+}
+write.table(data.frame(genesymbol,p_value),paste("3/P值的统计/lncRNA/LUAD-p64.txt",sep=""),row.names=F,quote=F,sep="\t")
+
+
+
+#----miRNA----#
+library(survival)
+#求miRNA的log-rank检验的p-value
+#缺失值：在clinical_data文件中缺失的样本，分不成两类的样本
+rm(list = ls())
+setwd("f:/datahe")
+#--导入的文件：临床数据：样本，性别，年龄，截尾事件,去掉正常样本
+clinic <- read.table(paste("CNV-Cancer Browser/LUAD/clinical_train_set64.txt",sep=""),sep="\t",header=T)
+
+p_value <- c()
+genesymbol <- c()
+#--导入的文件：miRNA基因：1为高风险分类，0为低风险分类
+for (n in list.files("3/miRNA/zhongzhi/0=2.3/LUAD64")){
+  gene <- read.table(paste("3/miRNA/zhongzhi/0=2.3/LUAD64/",n,sep=""),sep="\t",header=T)
+  all.data <- merge(gene,clinic,by.x="sample",by.y="sampleID")
+  dif <- survdiff(Surv(all.data$time,all.data$X_EVENT) ~ all.data$class)#求生存时间
+  p_value <- c(p_value,pchisq(dif$chisq,1,lower.tail=F))
+  genesymbol <- c(genesymbol,gsub(".txt","",n))
+}
+write.table(data.frame(genesymbol,p_value),paste("3/P值的统计/miRNA/LUAD-p64.txt",sep=""),row.names=F,quote=F,sep="\t")
+
+
+
+#----mRNA----#
+library(survival)
+#求mRNA的log-rank检验的p-value
+#缺失值：在clinical_data文件中缺失的样本，分不成两类的样本
+setwd("f:/datahe")
+#--导入的文件：临床数据：样本，性别，年龄，截尾事件,去掉正常样本
+clinic <- read.table("CNV-Cancer Browser/LUAD/clinical_train_set64.txt",sep="\t",header=T)
+
+p_value <- c()
+genesymbol <- c()
+#--导入的文件：mRNA基因：1为高风险分类，0为低风险分类
+for (n in list.files("3/mRNA/zhongzhi/LUAD64")){
+  gene <- read.table(paste("3/mRNA/zhongzhi/LUAD64/",n,sep=""),sep="\t",header=T)
+  all.data <- merge(gene,clinic,by.x="sample",by.y="sampleID")
+  dif <- survdiff(Surv(all.data$time,all.data$X_EVENT)~all.data$class)#求生存时间
+  p_value <- c(p_value,pchisq(dif$chisq,1,lower.tail=F))
+  genesymbol <- c(genesymbol,gsub(".txt","",n))
+}
+write.table(data.frame(genesymbol,p_value),paste("3/P值的统计/mRNA/LUAD-p64.txt",sep=""),row.names=F,quote=F,sep="\t")
+##################
+#----lncRNA----#
+#输出lncRNA的log-rank的p值（gene\tp值）
+
+#求lncRNA的log-rank检验的p-value
+#缺失值：在clinical_data文件中缺失的样本，分不成两类的样本
+library(survival)
+rm(list = ls())
+setwd("f:/datahe")
+#--导入的文件：临床数据：样本，性别，年龄，截尾事件,去掉正常样本
+clinic <- read.table(paste("CNV-Cancer Browser/LUAD/clinical_train_set73.txt",sep=""),sep="\t",header=T)
+p_value <- c()
+genesymbol <- c()
+#--导入的文件：lncRNA基因：1为高风险分类，0为低风险分类
+for (n in list.files("3/lncRNA/zhongzhi/0=2.3/LUAD73")){
+  gene <- read.table(paste("3/lncRNA/zhongzhi/0=2.3/LUAD73/",n,sep=""),sep="\t",header=T)
+  all.data <- merge(gene,clinic,by.x="sample",by.y="sampleID")
+  dif <- survdiff(Surv(all.data$time,all.data$X_EVENT) ~ all.data$class)#求生存时间
+  p_value <- c(p_value,pchisq(dif$chisq,1,lower.tail=F))
+  genesymbol <- c(genesymbol,gsub(".txt","",n))
+}
+write.table(data.frame(genesymbol,p_value),paste("3/P值的统计/lncRNA/LUAD-p73.txt",sep=""),row.names=F,quote=F,sep="\t")
+
+
+
+#----miRNA----#
+library(survival)
+#求miRNA的log-rank检验的p-value
+#缺失值：在clinical_data文件中缺失的样本，分不成两类的样本
+rm(list = ls())
+setwd("f:/datahe")
+#--导入的文件：临床数据：样本，性别，年龄，截尾事件,去掉正常样本
+clinic <- read.table(paste("CNV-Cancer Browser/LUAD/clinical_train_set73.txt",sep=""),sep="\t",header=T)
+
+p_value <- c()
+genesymbol <- c()
+#--导入的文件：miRNA基因：1为高风险分类，0为低风险分类
+for (n in list.files("3/miRNA/zhongzhi/0=2.3/LUAD73")){
+  gene <- read.table(paste("3/miRNA/zhongzhi/0=2.3/LUAD73/",n,sep=""),sep="\t",header=T)
+  all.data <- merge(gene,clinic,by.x="sample",by.y="sampleID")
+  dif <- survdiff(Surv(all.data$time,all.data$X_EVENT) ~ all.data$class)#求生存时间
+  p_value <- c(p_value,pchisq(dif$chisq,1,lower.tail=F))
+  genesymbol <- c(genesymbol,gsub(".txt","",n))
+}
+write.table(data.frame(genesymbol,p_value),paste("3/P值的统计/miRNA/LUAD-p73.txt",sep=""),row.names=F,quote=F,sep="\t")
+
+
+
+#----mRNA----#
+library(survival)
+#求mRNA的log-rank检验的p-value
+#缺失值：在clinical_data文件中缺失的样本，分不成两类的样本
+setwd("f:/datahe")
+#--导入的文件：临床数据：样本，性别，年龄，截尾事件,去掉正常样本
+clinic <- read.table("CNV-Cancer Browser/LUAD/clinical_train_set73.txt",sep="\t",header=T)
+
+p_value <- c()
+genesymbol <- c()
+#--导入的文件：mRNA基因：1为高风险分类，0为低风险分类
+for (n in list.files("3/mRNA/zhongzhi/LUAD73")){
+  gene <- read.table(paste("3/mRNA/zhongzhi/LUAD73/",n,sep=""),sep="\t",header=T)
+  all.data <- merge(gene,clinic,by.x="sample",by.y="sampleID")
+  dif <- survdiff(Surv(all.data$time,all.data$X_EVENT)~all.data$class)#求生存时间
+  p_value <- c(p_value,pchisq(dif$chisq,1,lower.tail=F))
+  genesymbol <- c(genesymbol,gsub(".txt","",n))
+}
+write.table(data.frame(genesymbol,p_value),paste("3/P值的统计/mRNA/LUAD-p73.txt",sep=""),row.names=F,quote=F,sep="\t")
+
+##################
+#----lncRNA----#
+#输出lncRNA的log-rank的p值（gene\tp值）
+
+#求lncRNA的log-rank检验的p-value
+#缺失值：在clinical_data文件中缺失的样本，分不成两类的样本
+library(survival)
+rm(list = ls())
+setwd("f:/datahe")
+#--导入的文件：临床数据：样本，性别，年龄，截尾事件,去掉正常样本
+clinic <- read.table(paste("CNV-Cancer Browser/LUAD/clinical_train_set82.txt",sep=""),sep="\t",header=T)
+p_value <- c()
+genesymbol <- c()
+#--导入的文件：lncRNA基因：1为高风险分类，0为低风险分类
+for (n in list.files("3/lncRNA/zhongzhi/0=2.3/LUAD82")){
+  gene <- read.table(paste("3/lncRNA/zhongzhi/0=2.3/LUAD82/",n,sep=""),sep="\t",header=T)
+  all.data <- merge(gene,clinic,by.x="sample",by.y="sampleID")
+  dif <- survdiff(Surv(all.data$time,all.data$X_EVENT) ~ all.data$class)#求生存时间
+  p_value <- c(p_value,pchisq(dif$chisq,1,lower.tail=F))
+  genesymbol <- c(genesymbol,gsub(".txt","",n))
+}
+write.table(data.frame(genesymbol,p_value),paste("3/P值的统计/lncRNA/LUAD-p82.txt",sep=""),row.names=F,quote=F,sep="\t")
+
+
+
+#----miRNA----#
+library(survival)
+#求miRNA的log-rank检验的p-value
+#缺失值：在clinical_data文件中缺失的样本，分不成两类的样本
+rm(list = ls())
+setwd("f:/datahe")
+#--导入的文件：临床数据：样本，性别，年龄，截尾事件,去掉正常样本
+clinic <- read.table(paste("CNV-Cancer Browser/LUAD/clinical_train_set82.txt",sep=""),sep="\t",header=T)
+
+p_value <- c()
+genesymbol <- c()
+#--导入的文件：miRNA基因：1为高风险分类，0为低风险分类
+for (n in list.files("3/miRNA/zhongzhi/0=2.3/LUAD82")){
+  gene <- read.table(paste("3/miRNA/zhongzhi/0=2.3/LUAD82/",n,sep=""),sep="\t",header=T)
+  all.data <- merge(gene,clinic,by.x="sample",by.y="sampleID")
+  dif <- survdiff(Surv(all.data$time,all.data$X_EVENT) ~ all.data$class)#求生存时间
+  p_value <- c(p_value,pchisq(dif$chisq,1,lower.tail=F))
+  genesymbol <- c(genesymbol,gsub(".txt","",n))
+}
+write.table(data.frame(genesymbol,p_value),paste("3/P值的统计/miRNA/LUAD-p82.txt",sep=""),row.names=F,quote=F,sep="\t")
+
+
+
+#----mRNA----#
+library(survival)
+#求mRNA的log-rank检验的p-value
+#缺失值：在clinical_data文件中缺失的样本，分不成两类的样本
+setwd("f:/datahe")
+#--导入的文件：临床数据：样本，性别，年龄，截尾事件,去掉正常样本
+clinic <- read.table("CNV-Cancer Browser/LUAD/clinical_train_set82.txt",sep="\t",header=T)
+
+p_value <- c()
+genesymbol <- c()
+#--导入的文件：mRNA基因：1为高风险分类，0为低风险分类
+for (n in list.files("3/mRNA/zhongzhi/LUAD82")){
+  gene <- read.table(paste("3/mRNA/zhongzhi/LUAD82/",n,sep=""),sep="\t",header=T)
+  all.data <- merge(gene,clinic,by.x="sample",by.y="sampleID")
+  dif <- survdiff(Surv(all.data$time,all.data$X_EVENT)~all.data$class)#求生存时间
+  p_value <- c(p_value,pchisq(dif$chisq,1,lower.tail=F))
+  genesymbol <- c(genesymbol,gsub(".txt","",n))
+}
+write.table(data.frame(genesymbol,p_value),paste("3/P值的统计/mRNA/LUAD-p82.txt",sep=""),row.names=F,quote=F,sep="\t")
+
+
+##################
+# log-rank<0.01  # 
+##################
+
+#----lncRNA----#
+rm(list = ls())
+setwd("f:/datahe")
+cancer = c("BLCA","BRCA","LIHC","LUAD","LUSC","STAD")
+for (k in cancer){
+  lncRNA <- read.table(paste("3/P值的统计/lncRNA/zhongzhi/0=1.3/",k,"_p.txt",sep = ""),sep = "\t",header = T,row.names = 1)
+  genesymbol <- rownames(lncRNA)[lncRNA$p_value<0.01]#---------------------------p值的范围
+  write.table(data.frame(genesymbol),file = paste("3/P值的统计/lncRNA-significant/zhongzhi/0=1.3/p_value/",k,"_P.txt",sep = ""),
+              sep = "\t",col.names = F,row.names = F,quote = F)
+  cat(k,length(genesymbol),"\n",sep = "\t",file ="3/P值的统计/lncRNA-significant/zhongzhi/0=1.3/tongji.txt",append = T)
+}
+
+#----miRNA----#
+rm(list = ls())
+setwd("f:/datahe")
+cancer = c("BLCA","BRCA","LIHC","LUAD","LUSC","STAD")
+for (k in cancer){
+  miRNA <- read.table(paste("3/P值的统计/miRNA/zhongzhi/0=1.3/",k,"_p.txt",sep = ""),sep = "\t",header = T,row.names = 1)
+  genesymbol <- rownames(miRNA)[miRNA$p_value<0.01]#---------------------------p值的范围
+  write.table(data.frame(genesymbol),file = paste("3/P值的统计/miRNA-significant/zhongzhi/0=1.3/p_value/",k,"_P.txt",sep = ""),
+              sep = "\t",col.names = F,row.names = F,quote = F)
+  cat(k,length(genesymbol),"\n",sep = "\t",file = "3/P值的统计/miRNA-significant/zhongzhi/0=1.3/tongji.txt",append = T)
+}
+
+#----mRNA----#
+rm(list = ls())
+setwd("f:/datahe")
+cancer = c("BLCA","BRCA","LIHC","LUAD","LUSC","STAD")
+for (k in cancer){
+  mRNA <- read.table(paste("3/P值的统计/mRNA/zhongzhi/",k,"_p.txt",sep = ""),sep = "\t",header = T,row.names = 1)
+  genesymbol <- rownames(mRNA)[mRNA$p_value<0.01]#---------------------------p值的范围
+  write.table(data.frame(genesymbol),file = paste("3/P值的统计/mRNA-significant/zhongzhi/p_value/",k,"_P.txt",sep = ""),
+              sep = "\t",col.names = F,row.names = F,quote = F)
+  cat(k,length(genesymbol),"\n",sep = "\t",file = "3/P值的统计/mRNA-significant/zhongzhi/tongji.txt",append = T)
+}
+
+##################
+#  fold-change   # 5
+##################
+###计算foldchange；高表达癌症样本均值/低表达癌症样本均值（两组数据均值之比）
+
+#----lncRNA----#
+rm(list =ls())
+setwd("f:/datahe")
+for (i in c(55,64,73,82)){
+clinic <- read.table(paste("CNV-Cancer Browser/LUAD/clinical_train_set",i,".txt",sep=""),sep="\t",header=T)
+sample <- as.character(clinic$sampleID)
+expr <- read.table("2/lncRNA-LUAD.txt",header=T,sep="\t",row.names = 1)
+fc <- c()
+fc1 <- c()
+for (m in rownames(expr)){
+  geneexpr <- as.numeric(expr[m,sample])
+  highexpr_mean <- mean(geneexpr[geneexpr > median(geneexpr)])
+  lowexpr_mean <- mean(geneexpr[geneexpr <= median(geneexpr)])
+  foldchange1 <- highexpr_mean-lowexpr_mean
+  if(lowexpr_mean == 0){lowexpr_mean <- 0.0001}
+  foldchange <- lowexpr_mean/highexpr_mean  #计算两组的foldchange
+  fc1 <- c(fc1,foldchange1)
+  fc <- c(fc,foldchange)
+}
+fc <- data.frame(GeneID = rownames(expr),foldchange = fc,a = fc1)
+write.table(fc,file = paste0("3/fc/lncRNA-LUAD",i,".txt"),row.name=F,quote = FALSE,sep="\t")
+
+
+
+
+#----miRNA----#
+
+expr <- read.table("2/miRNA-LUAD1.txt",header=T,sep="\t",row.names =1)
+fc <- c()
+fc1 <- c()
+for (m in rownames(expr)){
+  geneexpr <- as.numeric(expr[m,sample])
+  highexpr_mean <- mean(geneexpr[geneexpr > median(geneexpr)])
+  lowexpr_mean <- mean(geneexpr[geneexpr <= median(geneexpr)])
+  foldchange1 <- highexpr_mean-lowexpr_mean
+  if(lowexpr_mean == 0){lowexpr_mean <- 0.001}
+  foldchange <- lowexpr_mean/highexpr_mean  #计算两组的foldchange
+  fc1 <- c(fc1,foldchange1)
+  fc <- c(fc,foldchange)
+}
+fc <- data.frame(GeneID = rownames(expr),foldchange = fc,a = fc1)
+#a <- fc[fc$a>500&fc$foldchange>2,]
+write.table(fc,file = paste0("3/fc/miRNA-LUAD",i,".txt"),row.name = F,quote = FALSE,sep="\t")
+
+#----mRNA----#
+
+expr <- read.table("2/mRNA-LUAD1.txt",header=T,sep="\t",row.names = 1)
+fc<-c()
+fc1 <- c()
+for (m in rownames(expr)){
+  geneexpr <- as.numeric(expr[m,sample])
+  highexpr_mean <- mean(geneexpr[geneexpr > median(geneexpr)])
+  lowexpr_mean <- mean(geneexpr[geneexpr <= median(geneexpr)])
+  foldchange1 <- highexpr_mean-lowexpr_mean
+  if(lowexpr_mean == 0){lowexpr_mean <- 0.001}
+  foldchange <- lowexpr_mean/highexpr_mean  #计算两组的foldchange
+  fc1 <- c(fc1,foldchange1)
+  fc <- c(fc,foldchange)
+}
+fc <- data.frame(GeneID = rownames(expr),foldchange = fc,a = fc1)
+#a <- fc[fc$a>10&fc$foldchange>2,]
+write.table(fc,file = paste0("3/fc/mRNA-LUAD",i,".txt"),row.name=F,quote = FALSE,sep="\t")
+}
+
+##################
+# plot logrankfc # 6
+##################
+rm(list = ls())
+setwd("f:/datahe")
+library("ggplot2")
+for (i in c(55,64,73,82)){
+## lncRNA
+fc <- read.table(paste0("3/fc/lncRNA-LUAD",i,".txt"),sep = "\t",header = T)
+logrank <- read.table(paste0("3/P值的统计/lncRNA/LUAD-p",i,".txt"),sep = "\t",header = T)
+colnames(logrank) <- c("GeneID","logrank")
+logfc <- merge(fc,logrank)
+logfc <- logfc[logfc$a>1,]
+logfc$significant <- 0
+logfc[logfc$foldchange<0.5 &logfc$a>1 & logfc$logrank<0.05,"significant"] <- 1
+p <- ggplot(logfc,aes(foldchange,-log10(logrank),color = factor(logfc$significant)))
+p + geom_point() + scale_color_manual(values = c("#e4e4d9", "#215f00")) +
+  geom_hline(aes(yintercept = -log10(0.05)),colour = "grey50",linetype = "dashed") +
+  geom_vline(aes(xintercept = 0.5),colour = "grey50",linetype = "dashed") +
+  xlim(min(logfc$foldchange),max(logfc$foldchange)) +
+  #scale_x_continuous(breaks = c(0,0.2,0.4,0.5,0.6,0.7)) +
+  ggtitle("lncRNA") +
+  theme(panel.background = element_rect(fill = "transparent"),
+        legend.position = "none",
+        axis.line = element_line(size = 0.7, colour = "grey"),
+        panel.grid.major = element_line(colour = "transparent"))   ## 删去网格线
+ggsave(paste0("picture/last/lncRNA-logrank-fc",i,".png"))
+write.table(logfc,file = paste0("3/logrank-fc/lncRNA-LUAD",i,"last.txt"),sep = "\t",col.names = T,row.names = F,quote = F)
+
+## miRNA
+fc <- read.table(paste0("3/fc/miRNA-LUAD",i,".txt"),sep = "\t",header = T)
+logrank <- read.table(paste0("3/P值的统计/miRNA/LUAD-p",i,".txt"),sep = "\t",header = T)
+colnames(logrank) <- c("GeneID","logrank")
+logfc <- merge(fc,logrank)
+logfc <- logfc[logfc$a>10,]
+logfc$significant <- 0
+logfc[logfc$foldchange<0.5 & logfc$a>10 & logfc$logrank<0.05,"significant"] <- 1
+p <- ggplot(logfc,aes(foldchange,-log10(logrank),color = factor(logfc$significant)))
+p + geom_point() + scale_color_manual(values = c("#e4e4d9", "#215f00")) +
+  geom_hline(aes(yintercept = -log10(0.05)),colour = "grey50",linetype = "dashed") +
+  geom_vline(aes(xintercept = 0.5),colour = "grey50",linetype = "dashed") +
+  xlim(min(logfc$foldchange),max(logfc$foldchange)) +
+  #scale_x_continuous(breaks = c(0,0.2,0.4,0.5,0.6,0.7)) +
+  ggtitle("miRNA") +
+  theme(panel.background = element_rect(fill = "transparent"),
+        legend.position = "none",
+        axis.line = element_line(size = 0.7, colour = "grey"),
+        panel.grid.major = element_line(colour = "transparent"))   ## 删去网格线
+ggsave(paste0("picture/last/miRNA-logrank-fc",i,".png"))
+write.table(logfc,file = paste0("3/logrank-fc/miRNA-LUAD",i,"last.txt"),sep = "\t",col.names = T,row.names = F,quote = F)
+
+
+
+## mRNA
+fc <- read.table(paste0("3/fc/mRNA-LUAD",i,".txt"),sep = "\t",header = T)
+logrank <- read.table(paste0("3/P值的统计/mRNA/LUAD-p",i,".txt"),sep = "\t",header = T)
+colnames(logrank) <- c("GeneID","logrank")
+logfc <- merge(fc,logrank)
+logfc <- logfc[logfc$a>10,]
+logfc$significant <- 0
+logfc[logfc$foldchange<0.5 & logfc$a>10 & logfc$logrank<0.01,"significant"] <- 1
+p <- ggplot(logfc,aes(foldchange,-log10(logrank),color = factor(logfc$significant)))
+p + geom_point() + scale_color_manual(values = c("#e4e4d9", "#215f00")) +
+  geom_hline(aes(yintercept = -log10(0.05)),colour = "grey50",linetype = "dashed") +
+  geom_vline(aes(xintercept = 0.5),colour = "grey50",linetype = "dashed") +
+  xlim(min(logfc$foldchange),max(logfc$foldchange)) +
+  #scale_x_continuous(breaks = c(0,0.2,0.4,0.5,0.6,0.7)) +
+  ggtitle("mRNA") +
+  theme(panel.background = element_rect(fill = "transparent"),
+        legend.position = "none",
+        axis.line = element_line(size = 0.7, colour = "grey"),
+        panel.grid.major = element_line(colour = "transparent"))   ## 删去网格线
+ggsave(paste0("picture/last/mRNA-logrank-fc",i,".png"))
+write.table(logfc,file = paste0("3/logrank-fc/mRNA-LUAD",i,"last.txt"),sep = "\t",col.names = T,row.names = F,quote = F)
+## 合并基因
+lncRNA <- read.table(paste0("3/logrank-fc/lncRNA-LUAD",i,"last.txt"),sep = "\t",header = T)
+miRNA <- read.table(paste0("3/logrank-fc/miRNA-LUAD",i,"last.txt"),sep = "\t",header = T)
+mRNA <- read.table(paste0("3/logrank-fc/mRNA-LUAD",i,"last.txt"),sep = "\t",header = T)
+gene <- c(as.character(lncRNA$GeneID[lncRNA$significant == 1]),
+          as.character(miRNA$GeneID[miRNA$significant == 1]),
+          as.character(mRNA$GeneID[mRNA$significant == 1]))
+gene <- unique(gene)
+write.table(data.frame(gene = gene),file = paste0("3/logrank-fc/LUAD",i,"last.txt"),sep = "\t",col.names = T,row.names = F,quote = F)
+}
+# 大图
+fc1 <- read.table(paste0("3/fc/lncRNA-LUAD",i,".txt"),sep = "\t",header = T)
+logrank1 <- read.table(paste0("3/P值的统计/lncRNA/LUAD-p",i,".txt"),sep = "\t",header = T)
+colnames(logrank1) <- c("GeneID","logrank")
+logfc1 <- merge(fc1,logrank1)
+logfc1 <- logfc1[logfc1$a>1,]
+logfc1$`Significant Genes` <- "not significant"
+logfc1[logfc1$foldchange<0.5 & logfc1$logrank<0.05,"Significant Genes"] <- "lncRNA"
+fc2 <- read.table(paste0("3/fc/miRNA-LUAD",i,".txt"),sep = "\t",header = T)
+logrank2 <- read.table(paste0("3/P值的统计/miRNA/LUAD-p",i,".txt"),sep = "\t",header = T)
+colnames(logrank2) <- c("GeneID","logrank")
+logfc2 <- merge(fc2,logrank2)
+logfc2 <- logfc2[logfc2$a>10,]
+logfc2$`Significant Genes` <- "not significant"
+logfc2[logfc2$foldchange<0.5 & logfc2$logrank<0.05,"Significant Genes"] <- "miRNA"
+fc3 <- read.table(paste0("3/fc/mRNA-LUAD",i,".txt"),sep = "\t",header = T)
+logrank3 <- read.table(paste0("3/P值的统计/mRNA/LUAD-p",i,".txt"),sep = "\t",header = T)
+colnames(logrank3) <- c("GeneID","logrank")
+logfc3 <- merge(fc3,logrank3)
+logfc3 <- logfc3[logfc3$a>10,]
+logfc3$`Significant Genes` <- "not significant"
+logfc3[logfc3$foldchange<0.5 & logfc3$logrank<0.05,"Significant Genes"] <- "mRNA"
+logfc <- rbind(logfc1,logfc2,logfc3)
+logfc$`Significant Genes` <- factor(logfc$`Significant Genes`)
+
+p <- ggplot(logfc,aes(foldchange,-log10(logrank),color = `Significant Genes`))
+p + geom_point() + scale_color_manual(values = c("#215f00","#6CA426","#D79105","#e4e4d9")) +
+  geom_hline(aes(yintercept = -log10(0.05)),colour = "grey50",linetype = "dashed") +
+  geom_vline(aes(xintercept = 0.5),colour = "grey50",linetype = "dashed") +
+  xlim(min(logfc$foldchange),max(logfc$foldchange)) +
+  scale_x_continuous(breaks = c(0,0.1,0.2,0.3,0.4,0.5,0.6,0.7)) +
+  scale_y_continuous(breaks = c(0,1,-log10(0.05),2,3),labels = c(0,1,"-log10(0.05)",2,3)) +
+  theme(panel.background = element_rect(fill = "transparent"),
+        legend.position = "top",
+        legend.background = element_rect(fill="transparent"),
+        axis.line = element_line(size = 0.7, colour = "grey"),
+        panel.grid.major = element_line(colour = "transparent"))   ## 删去网格线
+ggsave(paste0("3/last/logrank-fc.pdf"))
+##################
+#    构建矩阵    # 7
+##################
+#根据lncRNA,miRNA,mRNA的log-rank<0.01且fold-change>3的基因表达谱，以中值分类构成矩阵。
+#行为显著gene，列为样本，0为低风险，1为高风险
+
+#----lncRNA----#
+rm(list = ls())
+setwd("f:/datahe")
+library(gplots)
+for (k in c(55,64,73,82)){
+gene <- read.table(paste0("3/logrank-fc/lncRNA-LUAD",k,"last.txt"),sep = "\t",header = T)
+gene <- as.character(gene[gene$significant == 1,"GeneID"])
+#--处理临床数据,合并临床样本和lncRNA样本
+clinic <- read.table(paste("CNV-Cancer Browser/LUAD/clinical_train_set",k,".txt",sep=""),header=T,sep = "\t")
+sample <- as.character(clinic$sampleID)
+
+#--生成矩阵 
+bigmatrix <- matrix(NA,length(sample),length(gene),byrow=T)
+rownames(bigmatrix) <- sample
+colnames(bigmatrix) <- gene
+for (i in colnames(bigmatrix)){
+  seekgene <- read.table(paste("3/lncRNA/zhongzhi/0=2.3/LUAD",k,"/",i,".txt",sep=""),header=T,row.names=1)
+  for (j in rownames(bigmatrix)){
+    bigmatrix[j,i] <- seekgene[j,1]
+  }
+}
+pdf(paste0("3/matrix/lncRNA-LUAD",k,"last.pdf"))
+heatmap.2(bigmatrix,Rowv = T,Colv = T,trace = "none",key = T,col = c("#e4e4d9","#215f00"),cexRow = 0.1,cexCol = 0.1)
+dev.off()
+write.table(bigmatrix,paste0("3/matrix/lncRNA-LUAD",k,"last.txt"),sep="\t",quote=F)
+
+
+
+#----miRNA----#
+
+gene <- read.table(paste0("3/logrank-fc/miRNA-LUAD",k,"last.txt"),sep = "\t",header = T)
+gene <- as.character(gene[gene$significant == 1,"GeneID"])
+#--处理临床数据,合并临床样本和lncRNA样本
+clinic <- read.table(paste("CNV-Cancer Browser/LUAD/clinical_train_set",k,".txt",sep=""),header=T,sep = "\t")
+sample <- as.character(clinic$sampleID)
+
+#--生成矩阵 
+bigmatrix <- matrix(NA,length(sample),length(gene),byrow=T)
+rownames(bigmatrix) <- sample
+colnames(bigmatrix) <- gene
+for (i in colnames(bigmatrix)){
+  seekgene <- read.table(paste("3/miRNA/zhongzhi/0=2.3/LUAD",k,"/",i,".txt",sep=""),header=T,row.names=1)
+  for (j in rownames(bigmatrix)){
+    bigmatrix[j,i] <- seekgene[j,1]
+  }
+}
+pdf(paste0("3/matrix/miRNA-LUAD",k,"last.pdf"))
+heatmap.2(bigmatrix,Rowv = T,Colv = T,trace = "none",key = T,col = c("#e4e4d9","#215f00"),cexRow = 0.1,cexCol = 0.1)
+dev.off()
+write.table(bigmatrix,paste0("3/matrix/miRNA-LUAD",k,"last.txt"),sep="\t",quote=F)
+
+
+#----mRNA----#
+
+gene <- read.table(paste0("3/logrank-fc/mRNA-LUAD",k,"last.txt"),sep = "\t",header = T)
+gene <- as.character(gene[gene$significant == 1,"GeneID"])
+#--处理临床数据,合并临床样本和lncRNA样本
+clinic <- read.table(paste("CNV-Cancer Browser/LUAD/clinical_train_set",k,".txt",sep=""),header=T,sep = "\t")
+sample <- as.character(clinic$sampleID)
+
+#--生成矩阵 
+bigmatrix <- matrix(NA,length(sample),length(gene),byrow=T)
+rownames(bigmatrix) <- sample
+colnames(bigmatrix) <- gene
+for (i in colnames(bigmatrix)){
+  seekgene <- read.table(paste("3/mRNA/zhongzhi/LUAD",k,"/",i,".txt",sep=""),header=T,row.names=1)
+  for (j in rownames(bigmatrix)){
+    bigmatrix[j,i] <- seekgene[j,1]
+  }
+}
+pdf(paste0("3/matrix/mRNA-LUAD",k,"last.pdf"))
+heatmap.2(bigmatrix,Rowv = T,Colv = T,trace = "none",key = T,col = c("#e4e4d9","#215f00"),cexRow = 0.1,cexCol = 0.1)
+dev.off()
+write.table(bigmatrix,paste0("3/matrix/mRNA-LUAD",k,"last.txt"),sep="\t",quote=F)
+  
+
+
+# 三者和一起生成矩阵
+
+gene <- read.table(paste0("3/logrank-fc/LUAD",k,"last.txt"),sep = "\t",header = T)
+gene <- as.character(gene[,1])
+#--处理临床数据,合并临床样本和lncRNA样本
+clinic <- read.table(paste("CNV-Cancer Browser/LUAD/clinical_train_set",k,".txt",sep=""),header=T,sep = "\t")
+sample <- as.character(clinic$sampleID)
+
+# 生成矩阵
+bigmatrix <- matrix(NA,length(sample),length(gene),byrow=T)
+rownames(bigmatrix) <- sample
+colnames(bigmatrix) <- gene
+for (i in colnames(bigmatrix)){
+  if(file.exists(paste("3/lncRNA/zhongzhi/0=2.3/LUAD",k,"/",i,".txt",sep = ""))){
+    seekgene <- read.table(paste("3/lncRNA/zhongzhi/0=2.3/LUAD",k,"/",i,".txt",sep=""),header=T,row.names=1)
+  }
+  if(file.exists(paste("3/miRNA/zhongzhi/0=2.3/LUAD",k,"/",i,".txt",sep = ""))){
+    seekgene <- read.table(paste("3/miRNA/zhongzhi/0=2.3/LUAD",k,"/",i,".txt",sep=""),header=T,row.names=1)
+  }
+  if(file.exists(paste("3/mRNA/zhongzhi/LUAD",k,"/",i,".txt",sep = ""))){
+    seekgene <- read.table(paste("3/mRNA/zhongzhi/LUAD",k,"/",i,".txt",sep=""),header=T,row.names=1)
+  }
+  for (j in rownames(bigmatrix)){
+    bigmatrix[j,i] <- seekgene[j,1]
+  }
+}
+pdf(paste0("3/matrix/LUAD",k,"last.pdf"))
+heatmap.2(t(bigmatrix),Rowv = T,Colv = T,trace = "none",key = T,col = c("#e4e4d9","#215f00"),cexRow = 0.1,cexCol = 0.1)
+dev.off()
+write.table(bigmatrix,paste0("3/matrix/LUAD",k,"last.txt"),sep="\t",quote=F)
+
+}
+##############################
+#  挖掘有相似样本分类的基因  # 8
+##############################
+#log-rank<0.01且foldchange>3的基因
+#======================================================================================================================#
+#对每个基因的高表达样本分成一个文件，低表达样本分成一个文件。
+#输出到lncRNAgroupsample，格式：基因\t样本1\t样本2...
+
+#----lncRNA----#
+rm(list = ls())
+setwd("f:/datahe")
+for (k in c(55,64,73,82)){
+lncRNA <- read.table(paste0("3/matrix/lncRNA-LUAD",k,"last.txt"),sep="\t",header=T)
+file.remove(paste0("3/lncRNAgroupsample/",k,"/low/sample/LUADlow.txt"))
+file.remove(paste0("3/lncRNAgroupsample/",k,"/high/sample/LUADhigh.txt"))
+for(i in colnames(lncRNA)){
+  lowsample <- rownames(lncRNA)[lncRNA[,i] == 0]
+  highsample <- rownames(lncRNA)[lncRNA[,i] == 1]
+  cat(i,lowsample,"\n",sep="\t",file=paste("3/lncRNAgroupsample/",k,"/low/sample/LUADlow.txt",sep=""),append=T)
+  cat(i,highsample,"\n",sep="\t",file=paste("3/lncRNAgroupsample/",k,"/high/sample/LUADhigh.txt",sep=""),append=T)
+}
+
+
+
+#----miRNA----#
+
+
+miRNA <- read.table(paste0("3/matrix/miRNA-LUAD",k,"last.txt"),sep="\t",header=T)
+file.remove(paste0("3/miRNAgroupsample/",k,"/low/sample/LUADlow.txt"))
+file.remove(paste0("3/miRNAgroupsample/",k,"/high/sample/LUADhigh.txt"))
+for(i in colnames(miRNA)){
+  lowsample <- rownames(miRNA)[miRNA[,i]==0]
+  highsample <- rownames(miRNA)[miRNA[,i]==1]
+  cat(i,lowsample,"\n",sep="\t",file=paste("3/miRNAgroupsample/",k,"/low/sample/LUADlow.txt",sep=""),append=T)
+  cat(i,highsample,"\n",sep="\t",file=paste("3/miRNAgroupsample/",k,"/high/sample/LUADhigh.txt",sep=""),append=T)
+}
+
+
+#----mRNA----#
+
+mRNA<-read.table(paste0("3/matrix/mRNA-LUAD",k,"last.txt"),sep="\t",header=T)
+file.remove(paste0("3/mRNAgroupsample/",k,"/low/sample/LUADlow.txt"))
+file.remove(paste0("3/mRNAgroupsample/",k,"/high/sample/LUADhigh.txt"))
+for(i in colnames(mRNA)){
+  lowsample <- rownames(mRNA)[mRNA[,i]==0]
+  highsample <- rownames(mRNA)[mRNA[,i]==1]
+  cat(i,lowsample,"\n",sep="\t",file=paste("3/mRNAgroupsample/",k,"/low/sample/LUADlow.txt",sep=""),append=T)
+  cat(i,highsample,"\n",sep="\t",file=paste("3/mRNAgroupsample/",k,"/high/sample/LUADhigh.txt",sep=""),append=T)
+}
+
+}
+
+#======================================================================================================================#
+#求每3个基因的交集见samplemerge.py
+#挖掘有相似样本分类的基因.py   Step 1
+#py输出的文件为：gene1\tgene2\tgene3\tintersection numbers\tintersection ratio
+
+#提取交叠个数大于30%的，频率超过均值的基因
+#挖掘有相似样本分类的基因.py   Step 2
+
+#======================================================================================================================#
+#1.处理高低都交叠>30的并集基因，输出文件为gene30/cancer.txt
+#2.构建cancer基因的矩阵,genematrix/cancer.txt
+#3.对矩阵聚类样本分类，groupsample/cancer.txt
+rm(list = ls())
+setwd("f:/datahe")
+#install.packages("gplots")
+library(gplots)
+#结合lncRNA、miRNA、mRNA重叠率>30%的基因
+cancer <- c("LUAD")
+m="82"
+#for(k in cancer){
+  
+  #lncRNA筛选出的基因
+  lncRNA1 <- read.table(paste("f:/datahe/3/lncRNAgroupsample/",m,"/high/gene30/LUAD.txt",sep = ""),header = T,sep = "\t")
+  lncRNA2 <- read.table(paste("f:/datahe/3/lncRNAgroupsample/",m,"/low/gene30/LUAD.txt",sep = ""),header = T,sep = "\t")
+  lncRNA3 <- read.table(paste("f:/datahe/3/lncRNAgroupsample/",m,"/h-l/gene30/LUAD.txt",sep = ""),header = T,sep = "\t")
+  lncRNA4 <- read.table(paste("f:/datahe/3/lncRNAgroupsample/",m,"/l-h/gene30/LUAD.txt",sep = ""),header = T,sep = "\t")
+  lncRNA <- union(lncRNA1[,1],lncRNA2[,1])
+  lncRNA <- union(lncRNA,lncRNA3[,1])
+  lncRNA <- union(lncRNA,lncRNA4[,1])
+  #miRNA筛选出的基因
+  miRNA1 <- read.table(paste("f:/datahe/3/miRNAgroupsample/",m,"/low/gene30/LUAD.txt",sep = ""),header = T,sep = "\t")
+  miRNA2 <- read.table(paste("f:/datahe/3/miRNAgroupsample/",m,"/high/gene30/LUAD.txt",sep = ""),header = T,sep = "\t")
+  miRNA3 <- read.table(paste("f:/datahe/3/miRNAgroupsample/",m,"/l-h/gene30/LUAD.txt",sep = ""),header = T,sep = "\t")
+  miRNA4 <- read.table(paste("f:/datahe/3/miRNAgroupsample/",m,"/h-l/gene30/LUAD.txt",sep = ""),header = T,sep = "\t")
+  miRNA <- union(miRNA1[,1],miRNA2[,1])
+  miRNA <- union(miRNA,miRNA3[,1])
+  miRNA <- union(miRNA,miRNA4[,1])
+  #mRNA筛选出的基因
+  mRNA1 <- read.table(paste("f:/datahe/3/mRNAgroupsample/",m,"/high/gene30/LUAD.txt",sep = ""),header = T,sep = "\t")
+  mRNA2 <- read.table(paste("f:/datahe/3/mRNAgroupsample/",m,"/low/gene30/LUAD.txt",sep = ""),header = T,sep = "\t")
+  mRNA3 <- read.table(paste("f:/datahe/3/mRNAgroupsample/",m,"/h-l/gene30/LUAD.txt",sep = ""),header = T,sep = "\t")
+  mRNA4 <- read.table(paste("f:/datahe/3/mRNAgroupsample/",m,"/l-h/gene30/LUAD.txt",sep = ""),header = T,sep = "\t")
+  mRNA <- union(mRNA1[,1],mRNA2[,1])
+  mRNA <- union(mRNA,mRNA3[,1])
+  mRNA <- union(mRNA,mRNA4[,1])
+  #miRNA、mRNA与lncRNA合并
+  gene <- union(union(lncRNA,miRNA),mRNA)
+  write.table(data.frame(gene),file = paste("f:/datahe/3/gene/LUAD",m,"last.txt",sep = ""),quote = F,sep = "\t",row.name = F)
+  cat(k,length(lncRNA),length(miRNA),length(mRNA),"\n",sep="\t",append=T,file="f:/datahe/3/gene/gene.txt")
+  #--------构建矩阵
+
+  
+for (m in c("55","64","73","82")){  
+  clinic <- read.table(paste("CNV-Cancer Browser/LUAD/clinical_train_set",m,".txt",sep = ""),header = T)
+  sample <- as.character(clinic$sampleID)
+  gene <- read.table(paste0("3/gene/LUAD",m,"last.txt"),sep = "\t",header = T)
+  gene <- as.character(gene[,1])
+  #做双向聚类的大矩阵
+  bigmatrix <- matrix(NA,length(gene),length(sample),byrow = T)
+  rownames(bigmatrix) <- gene
+  colnames(bigmatrix) <- sample
+  for (i in rownames(bigmatrix)){
+    #如果是lncRNA，样本为cancer.Tumor.TCGA.xxxx.xx
+    if(file.exists(paste("3/lncRNA/zhongzhi/0=2.3/LUAD",m,"/",i,".txt",sep = ""))){
+      seekgene <- read.table(paste("3/lncRNA/zhongzhi/0=2.3/LUAD",m,"/",i,".txt",sep = ""),header = T,row.names = 1)
+      for (j in colnames(bigmatrix)){
+        bigmatrix[i,j] <- seekgene[j,1]
+      }
+    }else if(file.exists(paste("3/miRNA/zhongzhi/0=2.3/LUAD",m,"/",gsub("\\.","-",i),".txt",sep = ""))){
+      #如果是miRNA样本为TCGA-xxxx-xx-01
+      seekgene <- read.table(paste("3/miRNA/zhongzhi/0=2.3/LUAD",m,"/",gsub("\\.","-",i),".txt",sep = ""),header = T,row.names = 1)
+      for (j in colnames(bigmatrix)){
+        bigmatrix[i,j] <- seekgene[j,1]
+      }
+    }else if(file.exists(paste("3/mRNA/zhongzhi/LUAD",m,"/",i,".txt",sep = ""))){
+      #如果是mRNA样本为TCGA-xxxx-xx-01
+      seekgene <- read.table(paste("3/mRNA/zhongzhi/LUAD",m,"/",i,".txt",sep = ""),header = T,row.names = 1)
+      for (j in colnames(bigmatrix)){
+        bigmatrix[i,j] <- seekgene[j,1]
+      }
+    }
+    
+  }
+  write.table(bigmatrix,file = paste("3/tichumatrix/LUAD",m,"last.txt",sep = ""),quote = FALSE,sep = "\t")
+  #画出样本基因heatmap
+  pdf(paste("3/tichumatrix/LUAD",m,"last.pdf",sep = ""))
+  heatmap.2(bigmatrix,Rowv = T,Colv = T,trace = "none",key = T,col = c("#e4e4d9","#215f00"),cexRow = 0.1,cexCol = 0.1)
+  dev.off()
+
+}
+
+
+#======================================================================================================================#
+#筛选出来的基因做cox分析  cox.R
+
+#cox分析出来的基因做双向聚类  lncRNA-miRNA-mRNA-final-heatmap.R
+
+rm(list = ls())
+setwd("f:/datahe")
+#install.packages("survival")
+library(survival)
+##################
+#   cox回归分析  # 9
+##################
+library(survival)
+#-----单因素cox回归分析
+for (m in c("55","64","73")){
+  #--构建各种临床因素的数据框
+  #clinic <- read.table(paste("CNV-Cancer Browser/LUAD/clinical_data",sep=""),sep = "\t",header = T)
+  m="82"
+  
+  clinic <- read.table(paste("CNV-Cancer Browser/LUAD/clinical_train_set",m,".txt",sep=""),header=T,sep="\t")
+  sample <- clinic$sampleID
+  #clinic_surv  <- merge(clinic,sample,by.x = "sampleID",by.y = "sample")
+  #clinic_surv1 <- data.frame(sampleID = clinic_surv$sampleID,
+  #                           time     = clinic_surv$time,                             #生存时间
+   #                          event    = clinic_surv$X_EVENT.x)
+                             #gender   = clinic_surv$gender,                                    #性别
+                             #age      = clinic_surv$days_to_birth/(-365))                       #年龄
+  #diagnosis_subtype = clinic_surv$diagnosis_subtype,                  #治疗亚型
+  #radiation_therapy = clinic_surv$radiation_therapy,                  #放射治疗
+  #histological_type = clinic_surv$histological_type,          #组织学类型
+  #additional_radiation_therapy            = clinic_surv$additional_radiation_therapy,            #是否有另外的放射治疗
+  #additional_pharmaceutical_therapy       = clinic_surv$additional_pharmaceutical_therapy,       #是否有另外的药物治疗
+  #new_tumor_event_after_initial_treatment = clinic_surv$new_tumor_event_after_initial_treatment) #在初期治疗后是否有新的癌症发生
+  
+  #基因
+  gene <- read.table(paste("3/cox/gene/LUAD",m,"3.txt",sep = ""),header = F,sep = "\t")
+  gene <- as.character(gene[,1])
+  
+  #--提取基因表达值
+  #lncRNA提取
+  expr <- read.table("2/lncRNA-LUAD.txt",header = T,sep = "\t",row.names = 1)
+  lncRNA <- intersect(gene[1:6],rownames(expr))
+  lncRNA <- t(expr[lncRNA,])
+  lncRNA <- data.frame(sampleID = rownames(lncRNA),lncRNA)
+  clinic <- merge(clinic,lncRNA)#合并其他因素和lncRNA
+  #miRNA提取
+  expr <- read.table("2/miRNA-LUAD1.txt",header = T,sep = "\t",row.names = 1)
+  miRNA <- intersect(gsub("\\.","-",gene),row.names(expr))
+  miRNA <- t(expr[miRNA,])
+  miRNA <- data.frame(sampleID = rownames(miRNA),miRNA)
+  clinic <- merge(clinic,miRNA)
+  #mRNA提取
+  expr <- read.table("2/mRNA-LUAD1.txt",header = T,sep = "\t",row.names = 1)
+  mRNA <- intersect(gene[10:280],rownames(expr))
+  mRNA <- t(expr[mRNA,])
+  mRNA <- data.frame(sampleID = rownames(mRNA),mRNA)
+  clinic <- merge(clinic,mRNA,by = "sampleID")
+  #最终临床数据的格式：行为临床样本，列为影响因素
+  rownames(clinic) <- clinic[,1]
+  clinic <- clinic[,-1]
+  #--单因素cox回归分析
+  write.table(clinic,file = paste0("3/single-cox/LUAD-expr",m,"last.txt"),sep = "\t",col.names = T,row.names = T,quote = F)
+  #file.remove(paste0("3/single-cox/LUAD",m,"last.txt"))
+  cat("gene","coef","exp(coef)","se(coef)","z","p","\n",file = paste0("3/single-cox/LUAD",m,"last.txt"),sep = "\t",append = T)
+  for (i in colnames(clinic)[3:length(colnames(clinic))]){
+    single_cox <- summary(coxph(Surv(clinic$time,clinic$X_EVENT) ~ clinic[,i],data = clinic))
+    cat(i,single_cox$coefficients[1,],"\n",sep = "\t",append = T)
+    #cat(i,single_cox$coefficients[1,],"\n",file = paste0("3/single-cox/LUAD",m,"last.txt"),sep = "\t",append = T)
+  }
+  
+}
+
+#--提取单cox的p<0.01的基因
+rm(list = ls())
+setwd("F:/datahe")
+for (m in c("55","64","73","82")){
+  gene <- read.table(paste("3/single-cox/LUAD",m,"3.txt",sep=""),header = T,sep = "\t",stringsAsFactors = F)
+  gene <- as.character(gene[gene$p<0.05,"gene"])
+  write.table(data.frame(gene),file = paste("3/single-cox/gene/LUAD",m,"last.txt",sep=""),sep = "\t",quote = F,row.name = F)
+
+  bigmatrix <- read.table(paste0("3/tichumatrix/LUAD",m,"last.txt"),sep = "\t",header = T)
+  bigmatrix <- as.matrix(bigmatrix[gene,])
+  write.table(bigmatrix,file = paste0("3/single-cox/LUAD-01",m,"last.txt"))
+  pdf(paste0("3/single-cox/LUAD-01",m,"last.pdf"))
+  heatmap.2(bigmatrix,Rowv = T,Colv = T,trace = "none",key = T,col = c("#e4e4d9","#215f00"),cexRow = 0.1,cexCol = 0.1)
+  dev.off()
+
+#-----多因素cox回归分析
+clinic <- read.table(paste("3/single-cox/LUAD-expr",m,"3.txt",sep=""),header = T,sep = "\t")
+clinic <- clinic[,c("X_EVENT","time",gene)]
+clinicdata <- read.table("CNV-Cancer Browser/LUAD/clinical_data",header = T,sep = "\t",stringsAsFactors = F)
+clinicdata <- clinicdata[,c("sampleID","age_at_initial_pathologic_diagnosis","gender","residual_tumor",
+                            "pathologic_stage","tobacco_smoking_history","days_to_death","days_to_last_followup")]
+clinicdata <- clinicdata[,c("sampleID","age_at_initial_pathologic_diagnosis","residual_tumor",
+                            "pathologic_stage","days_to_death","days_to_last_followup")]
+clinicdata$days_to_death[is.na(clinicdata$days_to_death)] <- clinicdata$days_to_last_followup[is.na(clinicdata$days_to_death)] 
+clinicdata$sampleID <- gsub("\\.01$","",gsub("-","\\.",clinicdata$sampleID))
+rownames(clinicdata) <- clinicdata$sampleID
+clinicdata <- clinicdata[rownames(clinic),]
+clinicdata <- clinicdata[,-1]
+clinic <- cbind(clinic,clinicdata)
+clinic$pathologic_stage <- gsub("A|B$","",clinic$pathologic_stage)
+
+
+cox <- summary(coxph(Surv(time,X_EVENT) ~ .,data = clinic))
+write.table(data.frame(cox$coefficients),file = paste("3/cox/LUAD",m,"3.txt",sep = ""),sep = "\t",quote = F)
+}               
+
+
+#逐步回归法
+#fit2 <- step(cox,direction="both")
+
+
+#--提取多cox的p<0.05的基因
+rm(list = ls())
+for (m in c("55","64","73","82")){
+  gene <- read.table(paste("3/cox/LUAD",m,"3.txt",sep=""),header = T,sep = "\t")
+  gene <- rownames(gene)[gene$Pr...z..<0.05]
+  if("gender" %in% gene | "age" %in% gene){
+    gene <- gene[-grep("gender|age",gene)]
+  }
+  if (length(gene)==0){
+    next
+  }
+  write.table(data.frame(gene),file = paste("3/cox/gene/LUAD",m,"last.txt",sep=""),sep = "\t",quote = F,col.name = F,row.name = F)
+}
+
+
+
+
+#统计多个癌症相同的临床因素
+a=read.table("CNV-Cancer Browser/BLCA/clinical_data",header = T,sep= '\t')
+a=colnames(a)
+for (i in c("BRCA","CESC","HNSC","KICH","LIHC","LUAD","LUSC","STAD","THCA")){
+  gene <- read.table(paste("CNV-Cancer Browser/",i,"/clinical_data",sep=""),header = T,sep="\t")
+  a <- intersect(a,colnames(gene))
+}
+
+##################
+#  打分 分标签   # 10
+##################
+rm(list = ls())
+setwd("f:/datahe")
+for (m in c("55","64","73","82")){
+  gene <- read.table(paste("3/cox/gene/LUAD",m,"3.txt",sep=""),sep = "\t",header = F)
+  gene <- as.character(gene[,1])
+  clinic <- read.table(paste("3/single-cox/LUAD-expr",m,"3.txt",sep=""),header = T,sep = "\t")
+  clinic <- clinic[,c("X_EVENT","time",gene)]
+  #colnames(cox) <- gsub("\\..*$","",colnames(cox))
+  coxscore <- read.table(paste0("3/single-cox/LUAD",m,"3.txt"),sep = "\t",header = T,row.names = 1)
+  score <- coxscore[gene,"coef"]
+  names(score) <- gene
+  if(length(gene) >= 2){
+    clinic$risk <- apply(clinic[,3:(length(gene)+2)],1,function(x){sum(unlist(x)*score)})
+  }else{clinic$risk <- score * clinic[,3]}
+  #cox <- as.data.frame(t(cox))
+  median <- median(clinic$risk)
+  clinic$class <- 1
+  clinic$class[clinic$risk < median] <- 0
+  write.table(clinic,paste0("3/genematrix/expr/LUAD-cox",m,"3.txt"),sep = "\t",col.names = T,row.names = T,quote = F)
+}
+
+
+p <- ggplot(a,aes(x = sampleID,y = time,color = factor(X_EVENT))) 
+p + geom_point(shape = 3) + 
+  scale_color_manual(values = c("#215f00","#E82630","#e4e4d9"),name="Status", labels=c("Alive","Dead","NA")) +
+  ylab("Survival Times (Months)") +
+  geom_vline(aes(xintercept = 315/2),colour = "grey50",linetype = "dashed",size = 1) +
+  theme(panel.background = element_rect(fill = "transparent"),
+        legend.position = c(1,1),legend.justification = c(1,1),
+        legend.background = element_rect(),
+        legend.key = element_rect(fill='transparent',size=0.5,linetype='dashed'),
+        axis.line.y = element_line(size = 0.7, colour = "grey"),
+        axis.title.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        panel.grid.major = element_line(colour = "transparent"))   ## 删去网格线
+ggsave("3/last/time.pdf")
+
+p <- ggplot(clinictrain,aes(x = sampleID,y = risk,color = sampleID)) 
+p + geom_point() + 
+  scale_color_continuous(low = "#215f00",high = "#E82630") +
+  geom_vline(aes(xintercept = 315/2),colour = "grey50",linetype = "dashed",size = 1) +
+  ylab("Riskscore") +
+  theme(panel.background = element_rect(fill = "transparent"),
+        legend.position = "none",
+        axis.line.y = element_line(size = 0.7, colour = "grey"),
+        axis.title.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        panel.grid.major = element_line(colour = "transparent"))   ## 删去网格线
+ggsave("3/last/risk.pdf")
+####################
+# 聚类分析，分标签 #
+####################
+#install.packages("gplots")
+library(gplots)
+setwd("f:/datahe")
+rm(list = ls())
+#红色高表达，白色低表达。
+#-----------lncRNA、miRNA、mRNA-------------#
+
+#for (k in list.files("CNV-Cancer Browser")){
+#fold-change和log-rank检验的交集
+#p <- read.table(paste("3/P值的统计/lncRNA-significant/0 = 1.3/p_value/",k,"_P.txt",sep = ""),sep = "\t")
+#fc <- read.table(paste("3/lncRNA-fc/fc_4/",k,".txt",sep = ""),sep = "\t")
+#gene <- intersect(fc[,1],p[,1])
+
+
+for(k in c("BLCA","BRCA","LIHC","LUAD","LUSC","STAD")){
+  #for (k in c("LIHC","LUAD","LUSC","STAD")){
+  count = 0
+  gene <- read.table(paste("3/cox/gene/",k,".txt",sep = ""),sep = "\t")
+  gene <- as.character(gene[,1])
+  if (length(gene)==1){
+    next
+  }
+  #临床数据，取临床数据与表达谱中的样本并集
+  clinic <- read.table(paste("CNV-Cancer Browser/",k,"/clinical_train_set.txt",sep = ""),header = T)
+  clinic <- clinic[order(clinic[,3]),]#排序
+  clinic <- clinic[grep("-01$",clinic$sample),]#保留癌症样本
+  sample <- clinic$sample
+  #lncRNA样本
+  if(!is.na(gene[grep("A|P",gene)[1]])){
+    sample_m <- read.table(paste("3/mRNA/zhongzhi/",k,"/",gene[grep("A|P",gene)[1]],".txt",sep = ""),header = T)
+    sample <- intersect(gsub("\\.","-",sample_m[,1]),sample)
+    count = count + 1
+  }
+  
+  if(!is.na(gene[grep("hsa",gene)[1]])){
+    sample_mi <- read.table(paste("3/miRNA/zhongzhi/0=1.3/",k,"/",gsub("\\.","-",gene[grep("hsa",gene)[1]]),".txt",sep = ""),header = T)
+    sample <- intersect(gsub("\\.","-",sample_mi[,1]),sample)
+  }
+  sample = gsub("-01$","",sample)
+  if(!is.na(gene[grep("ENSG",gene)[1]])){
+    sample_lnc <- read.table(paste("3/lncRNA/zhongzhi/0=1.3/",k,"/",gene[grep("ENSG",gene)[1]],".txt",sep = ""),header = T)
+    sample <- intersect(sample,gsub(paste(k,"-Tumor-",sep = ""),"",gsub("\\.","-",sample_lnc[,1])))
+    count = count + 1
+  }
+  
+  
+  
+  
+  
+  #做双向聚类的大矩阵
+  bigmatrix <- matrix(NA,length(gene),length(sample),byrow = T)
+  rownames(bigmatrix) <- gsub("X_","_",gene)
+  colnames(bigmatrix) <- sample
+  #对0，1聚类
+  # for (i in rownames(bigmatrix)){
+  #   #如果是lncRNA，样本为cancer.Tumor.TCGA.xxxx.xx
+  #   if(file.exists(paste("3/lncRNA/zhongzhi/0=1.3/",k,"/",i,".txt",sep = ""))){
+  #     seekgene <- read.table(paste("3/lncRNA/zhongzhi/0=1.3/",k,"/",i,".txt",sep = ""),header = T,row.names = 1)
+  #     for (j in colnames(bigmatrix)){
+  #       bigmatrix[i,j] <- seekgene[gsub("\\.01","",gsub("^",paste(k,"\\.Tumor\\.",sep = ""),gsub("-","\\.",j))),1]
+  #     }
+  #   }else if(file.exists(paste("3/miRNA/zhongzhi/0=1.3/",k,"/",gsub("\\.","-",i),".txt",sep = ""))){
+  #     #如果是miRNA样本为TCGA-xxxx-xx-01
+  #     seekgene <- read.table(paste("3/miRNA/zhongzhi/0=1.3/",k,"/",gsub("\\.","-",i),".txt",sep = ""),header = T,row.names = 1)
+  #     for (j in colnames(bigmatrix)){
+  #       bigmatrix[i,j] <- seekgene[gsub("$","\\.01",gsub("-","\\.",j)),1]
+  #     }
+  #   }
+  # else if(file.exists(paste("3/mRNA/zhongzhi/",k,"/",i,".txt",sep = ""))){
+  #     #如果是mRNA样本为TCGA-xxxx-xx-01
+  #     seekgene <- read.table(paste("3/mRNA/zhongzhi/",k,"/",i,".txt",sep = ""),header = T,row.names = 1)
+  #     for (j in colnames(bigmatrix)){
+  #       bigmatrix[i,j] <- seekgene[gsub("$","\\.01",gsub("-","\\.",j)),1]
+  #     }
+  #   }
+  #  
+  # }
+  #对表达值聚类
+  for (i in rownames(bigmatrix)){
+    #如果是lncRNA，样本为cancer.Tumor.TCGA.xxxx.xx
+    if(file.exists(paste("3/lncRNA/zhongzhi/0=2.3/",k,"/",i,".txt",sep = ""))){
+      expr <- read.table("2/lncRNA-LUAD.txt",header = T,row.names = 1)
+      if (count==1){
+        #expr[i,] = scale(as.numeric(expr[i,]))[,1]
+        for (j in colnames(bigmatrix)){
+          bigmatrix[i,j] <- expr[i,j]
+        }
+      }
+      if (count==2){
+        #expr[i,] = scale(as.numeric(expr[i,]))[,1]
+        for (j in colnames(bigmatrix)){
+          bigmatrix[i,j] <- expr[i,j]
+        }
+      }
+    }else if(file.exists(paste("3/miRNA/zhongzhi/0=2.3/",k,"/",gsub("\\.","-",i),".txt",sep = ""))){
+      #如果是miRNA样本为TCGA-xxxx-xx-01
+      expr <- read.table("2/miRNA-LUAD1.txt",header = T,row.names = 1)
+      #expr[gsub("\\.","-",i),] = scale(as.numeric(expr[gsub("\\.","-",i),]))[,1]
+      for (j in colnames(bigmatrix)){
+        bigmatrix[i,j] <- expr[gsub("\\.","-",i),gsub("$","\\.01",gsub("-","\\.",j))]
+      }
+    }
+    else if(file.exists(paste("3/mRNA/zhongzhi/",k,"/",i,".txt",sep = ""))){
+      #如果是mRNA样本为TCGA-xxxx-xx-01
+      expr <- read.table("2/mRNA-LUAD1.txt",header = T,row.names = 1)
+      if(!is.numeric(expr[1,1])){
+        rownames(expr) = expr[,1]
+        expr = expr[,-1]
+      }
+      #expr[i,] = scale(as.numeric(expr[i,]))[,1]
+      for (j in colnames(bigmatrix)){
+        bigmatrix[i,j] <- expr[i,gsub("$","\\.01",gsub("-","\\.",j))]
+      } 
+    }
+  }
+  
+  write.table(bigmatrix,file = paste("3/genematrix/expr/",k,"50.txt",sep = ""),quote = FALSE,sep = "\t")
+  #画出样本基因heatmap
+  pdf(paste("picture/heat/cox/",k,"2.pdf",sep = ""))
+  heatmap.2(bigmatrix,Rowv = T,Colv = T,trace = "none",key = T,col = redblue,cexRow = 0.1,cexCol = 0.1)
+  #heatmap.2(bigmatrix,Rowv = T,Colv = T,trace = "none",key = F,col = heat.colors(75),cexRow = 0.1,cexCol = 0.1)
+  dev.off()
+  
+  #提取聚类样本的两类
+  #  bigmatrix_T <- t(bigmatrix)
+  #  hc <- hclust(dist(bigmatrix_T))#欧几里得，最长距离法
+  #  class <- cutree(hc,k = 2)
+  #  class1 <- names(class[class == 1])
+  #  class2 <- names(class[class == 2])
+  
+  #样本分类
+  #  write.table(data.frame(sample = c(class1,class2),class = c(rep(0,length(class1)),rep(1,length(class2)))),
+  #              paste("3/groupsample/",k,".txt",sep=""),quote = FALSE,row.names=F,sep="\t")
+}
+
+
+
+#------------test
+
+
+for (k in c("LIHC","LUAD","LUSC","STAD")){
+  gene <- read.table(paste("3/cox/gene/",k,".txt",sep = ""),sep = "\t")
+  gene <- as.character(gene[,1])
+  if (length(gene)==1){
+    next
+  }
+  #临床数据，取临床数据与表达谱中的样本并集
+  clinic <- read.table(paste("CNV-Cancer Browser/",k,"/clinical_test_set.txt",sep = ""),header = T)
+  sample <- rownames(clinic)[grep("01$",rownames(clinic))]#保留癌症样本
+  
+  
+  if(!is.na(gene[grep("A|P",gene)[1]])){
+    expr <- read.table("2/mRNA-LUAD1.txt",header = T,row.names = 1)
+    sample_m <- colnames(expr)[grep("TCGA",colnames(expr))]
+    sample <- intersect(gsub("\\.","-",sample_m),sample)
+    count = count + 1
+  }
+  
+  if(!is.na(gene[grep("hsa",gene)[1]])){
+    expr <- read.table(paste("2/miRNAcancer/0=1.3/",k,".txt",sep = ""),header = T,row.names = 1)
+    sample_mi <- colnames(expr)[grep("TCGA",colnames(expr))]
+    sample <- intersect(gsub("\\.","-",sample_mi),sample)
+  }
+  sample = gsub("-01$","",sample)
+  if(!is.na(gene[grep("ENSG",gene)[1]])){
+    expr <- read.table(paste("2/lncRNAcancer/0=1.3/TCGA-",k,"-rnaexpr.txt",sep = ""),header = T,row.names = 1)
+    sample_lnc <- colnames(expr)[grep("TCGA",colnames(expr))]
+    sample <- intersect(sample,gsub(paste(k,"-Tumor-",sep = ""),"",gsub("\\.","-",sample_lnc)))
+    count = count + 1
+  }
+  
+  
+  bigmatrix <- matrix(NA,length(gene),length(sample),byrow = T)
+  rownames(bigmatrix) <- gsub("X_","_",gene)
+  colnames(bigmatrix) <- sample
+  for (i in rownames(bigmatrix)){
+    #如果是lncRNA，样本为cancer.Tumor.TCGA.xxxx.xx
+    if(file.exists(paste("3/lncRNA/zhongzhi/0=2.3/",k,"/",i,".txt",sep = ""))){
+      expr <- read.table("2/lncRNA-LUAD.txt",header = T,row.names = 1)
+      
+      for (j in colnames(bigmatrix)){
+        bigmatrix[i,j] <- expr[i,j]
+      }
+      
+    }else if(file.exists(paste("3/miRNA/zhongzhi/0=2.3/",k,"/",gsub("\\.","-",i),".txt",sep = ""))){
+      #如果是miRNA样本为TCGA-xxxx-xx-01
+      expr <- read.table(paste("2/miRNAcancer/0=2.3/",k,".txt",sep = ""),header = T,row.names = 1)
+      
+      for (j in colnames(bigmatrix)){
+        bigmatrix[i,j] <- expr[gsub("\\.","-",i),gsub("$","\\.01",gsub("-","\\.",j))]
+      }
+    }
+    else if(file.exists(paste("3/mRNA/zhongzhi/",k,"/",i,".txt",sep = ""))){
+      #如果是mRNA样本为TCGA-xxxx-xx-01
+      expr <- read.table("2/mRNA-LUAD1.txt",header = T,row.names = 1)
+      if(!is.numeric(expr[1,1])){
+        rownames(expr) = expr[,1]
+        expr = expr[,-1]
+      }
+      for (j in colnames(bigmatrix)){
+        bigmatrix[i,j] <- expr[i,gsub("$","\\.01",j)]
+      } 
+    }
+  }
+  
+  write.table(bigmatrix,file = paste("3/genematrix/expr-test/",k,"250-cox.txt",sep = ""),quote = FALSE,sep = "\t")
+}
+
+
+
+##################
+#    生存分析    #  11
+##################
+## 对癌症分标签
+rm(list = ls())
+setwd("f:/datahe")
+#install.packages("survival")
+library(survival)
+cancername <- c("LUAD")
+Colors = c("blue","red","green","black")
+# function to get color labels
+colLab <- function(n) {
+  if (is.leaf(n)) {
+    a <- attributes(n)
+    labCol <- labelColors[class[which(names(class) == a$label)]]
+    attr(n, "nodePar") <- c(a$nodePar, lab.col = labCol)
+  }
+  n
+}
+#for (i in cancername){
+  cancer <- read.table(paste0("3/genematrix/expr/",i,".txt"),sep = "\t",header = T)
+#  for (j in 2:4){
+#    cancer <- t(cancer)
+    hc <- hclust(dist(cancer))#欧几里得，最长距离法
+    class <- cutree(hc,k = j)
+    cancer <- cbind(cancer,as.data.frame(class))
+    cancer$sampleID <- rownames(cancer)
+    
+    clinic <- read.table(paste0("CNV-Cancer Browser/",substr(i,1,4),"/clinical_train_set.txt"),sep = "\t",header = T)
+    clinic$sampleID <- gsub("\\.01","",gsub("-","\\.",clinic$sampleID))
+    cancer <- merge(clinic,cancer)
+    hcd <- as.dendrogram(hc)
+    write.table(cancer,file = paste0("3/genematrix/expr-class/",i,j,"50.txt"),sep = "\t",col.names = T,row.names = F,quote = F)
+    labelColors = Colors[1:j]
+    
+    # using dendrapply
+    clusDendro <- dendrapply(hcd, colLab)
+    pdf(paste0("f:/datahe/3/genematrix/LUAD250-cox018.pdf"))
+    
+    # make plot
+    plot(clusDendro)
+    # 生存分析
+for (m in c("55","64","73","82")){ 
+  cancer <- read.table(paste0("3/genematrix/expr/LUAD-cox",m,"3.txt"),sep = "\t",header = T)
+  pdf(paste0("f:/datahe/3/genematrix/LUAD-cox",m,"3.pdf"))
+    kmsurvival <- survfit(Surv(cancer$time, cancer$X_EVENT) ~ cancer$class)
+    dif <- survdiff(Surv(cancer$time,cancer$X_EVENT) ~ cancer$class)#求生存时间
+    p_value <- pchisq(dif$chisq,1,lower.tail=F)
+    plot(kmsurvival, lty = 1:1, col=c("springgreen4","red3"), 
+         xlab="Time", ylab="Survival Probability",
+         main="LUAD survival analysis",axes=T,mark.time = T,lwd = 2)
+    #axis(1,c(0,20,40,60,80,100))
+    #axis(2,c(0,0.2,0.4,0.6,0.8,1))
+    legend(5,0.2, c("high survival","low survival"),
+           cex=0.8,bty="n",lty = 1:1,col=c("red3","springgreen4")) 
+    text(30,0.25,paste("p=",round(p_value,5),sep=""))
+    text(200,0.9,paste("N=",length(cancer$class),sep=""))
+    text(200,0.7,paste("n1=",length(cancer[cancer$class==1,1]),sep=""))
+    text(200,0.6,paste("n2=",length(cancer[cancer$class==0,1]),sep=""))
+    dev.off()
+  }
+#}
+
+
+##################
+# 对标签做箱式图 # 12
+##################
+rm(list = ls())
+setwd("f:/datahe")
+library(ggplot2)
+for (i in c("55","64","73","82")){
+  cancer <- read.table(paste0("3/genematrix/expr/LUAD-cox",i,"3.txt"),sep = "\t",header = T,row.names = 1)
+  cancer$class <- factor(cancer$class)
+  p <- ggplot(cancer,aes(x = class,y = time))
+  p + geom_jitter() +
+    geom_boxplot(aes(fill = class)) +
+    labs(title = "LUAD Survival Times") +
+    theme(panel.background = NULL,legend.position = "none")
+  ggsave(file = paste0("3/genematrix/LUAD-cox-surv",i,"3.pdf"))
+}
+##################
+#     KS检验     # 13
+##################
+rm(list = ls())
+setwd("f:/datahe")
+ksmatrix <- matrix(NA,6,length(gsub(".txt","",list.files("3/genematrix/expr-class"))),byrow = T)
+rownames(ksmatrix) <- c(12,13,14,23,24,34)
+colnames(ksmatrix) <- gsub(".txt","",list.files("3/genematrix/expr-class"))
+for (i in gsub(".txt","",list.files("3/genematrix/expr-class"))){
+  cancer <- read.table(paste0("3/genematrix/expr-class/",i,".txt"),sep = "\t",header = T,row.names = 1)
+  class1 <- cancer[cancer$class == 1,"time"]
+  class2 <- cancer[cancer$class == 0,"time"]
+  ks12 <- ks.test(class1,class2)
+  ksmatrix["12",i] <- ks12$p.value
+  if(as.numeric(substr(i,5,5)) >= 3){
+    class3 <- cancer[cancer$class == 3,"time"]
+    ks13 <- ks.test(class1,class3)
+    ks23 <- ks.test(class2,class3)
+    ksmatrix["13",i] <- ks13$p.value
+    ksmatrix["23",i] <- ks23$p.value
+    if(as.numeric(substr(i,5,5)) == 4){
+      class4 <- cancer[cancer$class == 4,"time"]
+      ks14 <- ks.test(class1,class4)
+      ks24 <- ks.test(class2,class4)
+      ks34 <- ks.test(class3,class4)
+      ksmatrix["14",i] <- ks14$p.value
+      ksmatrix["24",i] <- ks24$p.value
+      ksmatrix["34",i] <- ks34$p.value
+    }
+  }
+}
+write.table(ksmatrix,file = "3/genematrix/ks.txt",na = "",quote = F,col.names = T,row.names = T,sep = "\t")
+
+
+##################
+#  randomForest  # 14
+##################
+
+## randomForest
+rm(list = ls())
+setwd("f:/datahe")
+library(randomForest)
+for (i in c("55","64","73","82")){
+  cancer <- read.table(paste0("3/genematrix/expr/LUAD-cox",i,"3.txt"),sep = "\t",header = T)
+  cancer <- cancer[,-c(1,2,(ncol(cancer)-1))]
+  cancer$class <- factor(cancer$class)
+  n <- length(names(cancer))
+  Error <- NULL
+  set.seed(2016)
+  # ntree：指定随机森林所包含的决策树数目，默认为500
+  # proximity：逻辑参数，是否计算模型的临近矩阵，主要结合MDSplot()函数使用
+  for(j in 1:(n-1)){
+    rf <- randomForest(class~.,data = cancer,mtry=j,proximity=TRUE)
+    err <- mean(rf$err.rate)
+    Error[j] <- err
+  }
+  m = which.min(Error)    ##选择平均误差最小的m
+  
+  #---- step2:选择最优ntree参数值。
+  # ntree参数指出建模时决策树的数量，过高会增加复杂度，过低会增加错误率。以mtry＝m进行随机森林建模，并将模型错误率与决策树的关系可视化。
+  # 训练集随机森林模型
+  rf <- randomForest(class ~ ., data=cancer,mtry = m,ntree=100, proximity=TRUE)  
+  table(predict(rf), cancer$class)  
+  
+  # 根据生成的随机森林中不同的树来绘制误差率
+  pdf(paste0("3/rf/plot/LUAD-rf",i,"3.pdf"))
+  plot(rf,main = paste0(i," rf"))  
+  MDSplot(rf,fac=cancer$class) # 随机森林的可视化
+  # 查看变量的重要性
+  gini <- as.data.frame(importance(rf))
+  varImpPlot(rf)  # 对Gini绘图,Gini越低纯度越高即错误率越低
+  #---- step3:对构建好的随机森林进行测试，并通过margin（）来查看结果。
+  # margin：正确归类的比例减去错误归类的最大比例。margin为正说明数据点划分正确。
+  cancer_test <- read.table(paste0("3/genematrix/expr-test/LUAD",i,"3.txt"),sep = "\t",header = T,row.names = 1)
+  irisPred <- predict(rf, newdata=cancer_test)  
+  table(irisPred,  cancer_test$class)  
+  plot(margin(rf,  cancer_test$class))
+  dev.off()
+  
+}
+
+
+
+
+
+##################
+#  test 分类ROC  # 15
+##################
+rm(list = ls())
+setwd("f:/datahe")
+library(survival)
+library(survivalROC)
+library(pROC)
+for (i in c("55","64","73","82")){
+  clinic <- read.table(paste("CNV-Cancer Browser/LUAD/clinical_test_set73.txt",sep=""),header=T,sep="\t")
+  sample <- clinic$sampleID
+  
+  #基因
+  gene <- read.table(paste("3/cox/gene/LUAD",i,"3.txt",sep = ""),header = F,sep = "\t")
+  gene <- as.character(gene[,1])
+  
+  #--提取基因表达值
+  #lncRNA提取
+  expr <- read.table("2/lncRNA-LUAD.txt",header = T,sep = "\t",row.names = 1)
+  lncRNA <- intersect(gene[1:5],rownames(expr))
+  lncRNA <- t(expr[lncRNA,])
+  lncRNA <- data.frame(sampleID = rownames(lncRNA),lncRNA)
+  clinic <- merge(clinic,lncRNA)#合并其他因素和lncRNA
+  #miRNA提取
+  expr <- read.table("2/miRNA-LUAD1.txt",header = T,sep = "\t",row.names = 1)
+  miRNA <- intersect(gsub("\\.","-",gene),row.names(expr))
+  miRNA <- t(expr[miRNA,])
+  miRNA <- data.frame(sampleID = rownames(miRNA),miRNA)
+  clinic <- merge(clinic,miRNA)
+  #mRNA提取
+  expr <- read.table("2/mRNA-LUAD1.txt",header = T,sep = "\t",row.names = 1)
+  mRNA <- intersect(gene[6:8],rownames(expr))
+  mRNA <- t(expr[mRNA,])
+  mRNA <- data.frame(sampleID = rownames(mRNA),mRNA)
+  clinic <- merge(clinic,mRNA,by = "sampleID")
+  #最终临床数据的格式：行为临床样本，列为影响因素
+  rownames(clinic) <- clinic[,1]
+  clinic <- clinic[,-1]
+  
+  #clinictest <- read.table(paste0("3/genematrix/expr-test/LUAD250-cox01.txt"),header = T,sep = "\t") 
+  #clinictest <- clinictest[,c(1:6)]
+  coxscore <- read.table(paste0("3/cox/LUAD",i,"3.txt"),sep = "\t",header = T)
+  score <- coxscore[gene,"coef"]
+  names(score) <- gene
+  # 打分
+  clinic$riskscore <- apply(clinic[,3:(2+length(gene))],1,function(x){sum(unlist(x)*score)})
+  clinic$class <- 1
+  # median
+  clinictrain <- read.table(paste("3/single-cox/LUAD-expr",i,"3.txt",sep=""),header = T,sep = "\t")
+  clinictrain <- clinictrain[,gene]
+  if(length(gene) >= 2){
+    clinictrain$risk <- apply(clinictrain,1,function(x){sum(unlist(x)*score)})
+  }else{clinictrain$risk <- score * clinictrain[,1]}
+  median <- median(clinictrain$risk)
+  clinic$class[clinic$riskscore < median] <- 0
+  #训练模型并进行预测分类  
+  #kknn <- kknn(class ~ .,clinictrain, clinictest, k=7, distance=2)  
+  #clinictest$class <- fitted(kknn)
+  write.table(clinic,file = paste0("3/genematrix/expr-test/LUAD",i,"3.txt"),sep = "\t",col.names = T,row.names = T)
+clinictest <- read.table("clinictest.txt",sep = "\t",header = T)
+clinictest <- read.table("2/GSE810891.txt",sep = "\t",header = T)
+clinictrain <- read.table("clinictrain.txt",sep = "\t",header = T)
+colnames(clinictrain)[7] <- colnames(clinictest)[7] 
+## kM
+for(i in 1:100000){
+clinic <- clinictest[sample(1:nrow(clinictest), (nrow(clinictest)-25)),]
+#clinic$class <- as.factor(clinic$class)
+#clinic <- rbind(clinic,clinictrain[sample(1:nrow(clinictrain), 100),])
+ # clinic <- clinictrain
+#roc1<-roc(clinic$class,clinic$time,levels=c(0,1))
+  nobs = NROW(clinic)
+  Mayo.fit4<-survivalROC.C(Stime=clinic$days_to_death,
+                           status=clinic$X_EVENT,
+                           marker=clinic$risk,
+                           predict.time=365*5,
+                           span=0.25*nobs^(-0.20))
+   kmsurvival <- survfit(Surv(days_to_death,X_EVENT) ~ class,data = clinic)
+  dif <- survdiff(Surv(days_to_death,X_EVENT) ~ class,data = clinic)#求生存时间
+  p_value <- pchisq(dif$chisq,1,lower.tail=F)
+  
+if(Mayo.fit4$AUC<0.7 | p_value >0.05){next}
+write.table(clinic,paste0("3/genematrix/LUAD-gse-roc733-",i,".txt"),sep = "\t",col.names = T,row.names = T,quote = F)
+
+ 
+  pdf(paste("3/genematrix/LUAD-gse-roc733-",i,".pdf",sep=""))
+  #pdf(paste("3/genematrix/LUAD-test-roc733-",i,".pdf",sep=""))
+  plot(kmsurvival, lty = 1:1, col=c("springgreen4","red3"), 
+       xlab="Time", ylab="Survival Probability",
+       main="LUAD survival analysis",axes=T,mark.time = T,lwd = 2)
+  #axis(1,c(0,20,40,60,80,100))
+  #axis(2,c(0,0.2,0.4,0.6,0.8,1))
+  legend(500,0.2, c("high survival","low survival"),
+         cex=0.8,bty="n",lty = 1:1,col=c("red3","springgreen4")) 
+  text(500,0.25,paste("p=",round(p_value,4),sep=""))
+  text(500,0.9,paste("N=",length(clinic$class),sep=""))
+  text(500,0.7,paste("n1=",length(clinic[clinic$class==1,1]),round(mean(clinic[clinic$class==1,"time"])/12,2)))
+  text(500,0.6,paste("n2=",length(clinic[clinic$class==0,1]),round(mean(clinic[clinic$class==0,"time"])/12,2)))
+## ROC
+  #roc1<-roc(clinic$class,clinic$time,levels=c(0,1))
+  #plot(roc1,print.auc=T, auc.polygon=T, grid=c(0.1, 0.2), grid.col=c("green","red"), max.auc.polygon=T, auc.polygon.col="skyblue",print.thres=T)
+  #plot(roc1,print.auc=T, auc.polygon=F, grid=c(0.1, 0.2),col="red", max.auc.polygon=F, auc.polygon.col="transparent",print.thres=F)
+  
+  #cutoff <- median
+  pdf("3/train-ROC.pdf")
+  
+  plot(Mayo.fit4$FP,Mayo.fit4$TP,type="l",
+       xlim=c(0,1),ylim=c(0,1),
+       xlab="1-Specificity(FP)",ylab="Sensitivity(TP)",main="Year = 5",col="firebrick3",lwd=2)
+  abline(0,1,lty=2)
+  legend("right",bty = "n",paste("AUC=",round(Mayo.fit4$AUC,3)))
+  
+  dev.off()
+}
+
+  heatmap.2(t(c),Rowv = F,Colv = F,trace = "none",key = T,col = greenred,cexRow = 0.1,cexCol = 0.1,breaks = -8:10)  
+  
+## 表型
+  kmsurvival <- survfit(Surv(time, X_EVENT) ~ pathologic_stage,data = clinic)
+  dif <- survdiff(Surv(time, X_EVENT) ~ pathologic_stage,data = clinic)#求生存时间
+  p_value <- pchisq(dif$chisq,1,lower.tail=F)
+  pdf(paste("3/last/stage.pdf",sep=""))
+  plot(kmsurvival, lty = 1:1, col=c("springgreen4","orchid3","red3","tan2"), 
+       xlab="Time", ylab="Survival Probability",
+       main="LUAD survival analysis",axes=T,mark.time = T,lwd = 2)
+  #axis(1,c(0,20,40,60,80,100))
+  #axis(2,c(0,0.2,0.4,0.6,0.8,1))
+  legend(120,1, c("Stage I","Stage II","Stage III","Stage IV"),
+         cex=0.8,bty="n",lty = 1,col=c("springgreen4","orchid3","red3","tan2")) 
+  text(180,0.7,paste("Log rank p=",round(p_value,7),sep=""))
+  text(200,1,"Sample     Mean(years)")
+  text(200,0.95,paste(length(clinic$pathologic_stage[clinic$pathologic_stage=="Stage I"]),
+                     round(mean(clinic$time[clinic$pathologic_stage=="Stage I"])/12,2),sep="         "))
+  text(200,0.9,paste(length(clinic$pathologic_stage[clinic$pathologic_stage=="Stage II"]),
+                      round(mean(clinic$time[clinic$pathologic_stage=="Stage II"])/12,2),sep="         "))
+  text(200,0.85,paste(length(clinic$pathologic_stage[clinic$pathologic_stage=="Stage III"]),
+                     round(mean(clinic$time[clinic$pathologic_stage=="Stage III"])/12,2),sep="         "))
+  text(200,0.8,paste(length(clinic$pathologic_stage[clinic$pathologic_stage=="Stage IV"]),
+                      round(mean(clinic$time[clinic$pathologic_stage=="Stage IV"])/12,2),sep="         "))
+
+ 
+  dev.off()
+  
+  
+}
+
+##################
+#  test new data # 16
+##################
+##----- GSE81089
+
+rm(list = ls())
+setwd("f:/datahe")
+library(survival)
+library(survivalROC)
+test <- read.csv("2/GSE81089_FPKM_cufflinks.tsv",sep = "\t",header = T,row.names = 1)
+gene <- read.table(paste0("3/cox/gene/LUAD733.txt"),sep = "\t",header = F,stringsAsFactors = F)
+gene[3,1] <- "ENSG00000272036"
+gene <- gsub("\\..*$","",as.character(gene[,1]))
+#gene <- c("ERO1A","CDCP1","PLOD1","TGFBI","SERPINE1")
+#gene <- c("ENSG00000229953","ENSG00000273038","ENSG00000120708","ENSG00000023697","ENSG00000075618","ENSG00000114346","ENSG00000127824","ENSG00000161638" )
+#gene <- c("218451_at","200827_at","201506_at","202628_s_at")
+test <- test[gene,]
+test <- as.data.frame(t(test))
+test <- test[grep("T$",rownames(test)),]
+#test <- test[test$Gene.symbol %in% gene,]
+#test <- test[grep("^NM_.*",test$GenBank.Accession),]
+coxscore <- read.table(paste0("3/single-cox/LUAD733.txt"),sep = "\t",header = T,stringsAsFactors = F)
+coxscore$gene[34] <- "ENSG00000272036"
+coxscore$gene <- gsub("\\..$","",coxscore$gene)
+coxscore$gene <- gsub("\\...$","",coxscore$gene)
+rownames(coxscore) <- coxscore$gene
+score <- coxscore[gene,"coef"]
+names(score) <- gene
+# 打分
+test$riskscore <- apply(test[,c(2:5)],1,function(x){sum(unlist(x)*score)})
+test$class <- 1
+# median
+clinictrain <- read.table(paste("3/single-cox/LUAD-expr733.txt",sep=""),header = T,sep = "\t")
+colnames(clinictrain)[grep("hsa.mir.139",colnames(clinictrain))] <- "ENSG00000272036"
+colnames(clinictrain) <- gsub("\\..*$","",colnames(clinictrain))
+clinictrain <- clinictrain[,gene]
+if(length(gene) >= 2){
+  clinictrain$risk <- apply(clinictrain,1,function(x){sum(unlist(x)*score)})
+}else{clinictrain$risk <- score * clinictrain[,1]}
+median <- median(clinictrain$risk)
+test$class[test$risk < median] <- 0
+
+clinic <- read.table("2/GSE81089-clinic.txt",sep = "\t",header = T)
+test$tumor..t..or.normal..n. <- rownames(test)
+test <- merge(test,clinic)
+test <- test[test$histology == 2,]# AC unspecified
+# time
+time <- test[,c("surgery.date","vital.date")]
+time$surgery <- as.numeric(gsub("/.*$","",time$surgery.date))*12 +  # 年
+  as.numeric(gsub("/.*$","",gsub("^.{4}/","",time$surgery.date))) + # 月
+  as.numeric(gsub("^.*/","",time$surgery.date))/30                  # 日
+time$vital <- as.numeric(gsub("/.*$","",time$vital.date))*12 +    # 年
+  as.numeric(gsub("/.*$","",gsub("^.{4}/","",time$vital.date))) + # 月
+  as.numeric(gsub("^.*/","",time$vital.date))/30                  # 日
+time$time <- time$vital - time$surgery
+test$time <- time$time
+test$state[test$dead. == 1] <- 0
+test$state[test$dead. == 0] <- 1
+
+write.table(test,"2/GSE810891.txt",sep = "\t",col.names = T,row.names = F,quote = F)
+#write.table(test,"2/GSE81089.txt",sep = "\t",col.names = T,row.names = F,quote = F)
+
+## kM
+#sample <- sample(nrow(test),nrow(test)*0.8)
+#a <- test[sample,]
+kmsurvival <- survfit(Surv(time, state) ~ class,data = a)
+dif <- survdiff(Surv(time, state) ~ class,data = a)#求生存时间
+p_value <- pchisq(dif$chisq,1,lower.tail=F)
+#p_value
+#dif
+#write.table(a,"3/last/0026GSE81089.txt",sep = "\t",quote = F)
+a <- read.table("3/last/0026GSE81089.txt",sep = "\t")
+pdf(paste("3/last/0026GSE81089.pdf",sep=""))
+plot(kmsurvival, lty = 1:1, col=c("springgreen4","red3"), 
+     xlab="Time", ylab="Survival Probability",
+     main=paste("LUAD survival analysis"),axes=T,mark.time = T,lwd = 2)
+#axis(1,c(0,20,40,60,80,100))
+#axis(2,c(0,0.2,0.4,0.6,0.8,1))
+legend(5,0.2, c("high survival","low survival"),
+       cex=0.8,bty="n",lty = 1:1,col=c("red3","springgreen4")) 
+text(30,0.25,paste("p=",round(p_value,4),sep=""))
+text(80,0.9,paste("N=",length(a$class),sep=""))
+text(80,0.7,paste("n1=",length(a[a$class==1,1]),round(mean(a[a$class==1,"time"])/12,2)))
+text(80,0.6,paste("n2=",length(a[a$class==0,1]),round(mean(a[a$class==0,"time"])/12,2)))
+## ROC
+
+nobs = NROW(a)
+Mayo.fit4<-survivalROC.C(Stime=a$time,
+                         status=a$state,
+                         marker=a$riskscore,
+                         predict.time=365,
+                         span=0.25*nobs^(-0.20))
+
+plot(Mayo.fit4$FP,Mayo.fit4$TP,type="l",
+     xlim=c(0,1),ylim=c(0,1),
+     xlab="1-Specificity(FP)",ylab="Sensitivity(TP)",main="Year = 5",col="firebrick3",lwd=2)
+abline(0,1,lty=2)
+legend("right",bty = "n",paste("AUC=",round(Mayo.fit4$AUC,3)))
+dev.off()
+
+test$stage.tnm[test$stage.tnm == 1 | test$stage.tnm == 2] = "Stage I"
+test$stage.tnm[test$stage.tnm == 3 | test$stage.tnm == 4] = "Stage II"
+test$stage.tnm[test$stage.tnm == 5 | test$stage.tnm == 6] = "Stage III"
+test$stage.tnm[test$stage.tnm == 7] = "Stage IV"
+kmsurvival <- survfit(Surv(time, state) ~ stage.tnm,data = a)
+dif <- survdiff(Surv(time, state) ~ stage.tnm,data = a)
+p_value <- pchisq(dif$chisq,1,lower.tail=F)
+pdf(paste("3/last/stage0026GSE81089.pdf",sep=""))
+plot(kmsurvival, lty = 1:1, col=c("springgreen4","orchid3","red3","tan2"), 
+     xlab="Time", ylab="Survival Probability",
+     main="LUAD survival analysis",axes=T,mark.time = T,lwd = 2)
+#axis(1,c(0,20,40,60,80,100))
+#axis(2,c(0,0.2,0.4,0.6,0.8,1))
+legend(5,0.2, c("Stage I","Stage II","Stage III","Stage IV"),
+       cex=0.8,bty="n",lty = 1,col=c("springgreen4","orchid3","red3","tan2")) 
+text(25,0.25,paste("Log rank p=",round(p_value,4),sep=""))
+text(40,0.2,"Sample     Mean(years)")
+text(40,0.17,paste(length(a$stage.tnm[a$stage.tnm=="Stage I"]),
+                    round(mean(a$time[a$stage.tnm=="Stage I"])/12,2),sep="         "))
+text(40,0.15,paste(length(a$stage.tnm[a$stage.tnm=="Stage II"]),
+                   round(mean(a$time[a$stage.tnm=="Stage II"])/12,2),sep="         "))
+text(40,0.12,paste(length(a$stage.tnm[a$stage.tnm=="Stage III"]),
+                    round(mean(a$time[a$stage.tnm=="Stage III"])/12,2),sep="         "))
+text(40,0.09,paste(length(a$stage.tnm[a$stage.tnm=="Stage IV"]),
+                   round(mean(a$time[a$stage.tnm=="Stage IV"])/12,2),sep="         "))
+
+
+dev.off()
+a <- read.table("3/last/0026GSE81089.txt",sep = "\t")
+a <- a[,-c(1:6,8,10,11,13:17)]
+a$class[a$class == 0] = "low"
+a$class[a$class == 1] = "high"
+
+coe1 <- data.frame()
+for (i in colnames(a)[1:3]){
+  single_cox <- summary(coxph(Surv(time,state) ~ a[,i],data = a))
+  single <- cbind(single_cox$coefficients,single_cox$conf.int)
+  coe1 <- rbind(coe1,single)
+}
+
+coex1 <- summary(coxph(Surv(time,state) ~ .,data = a))
+  
+  
+
+##----- GSE37745 
+
+rm(list = ls())
+setwd("f:/datahe")
+library(survival)
+library(survivalROC)
+test <- read.csv("2/GSE37745_series_matrix.txt",sep = "\t",header = T,skip = 85,row.names = 1)
+probeidsymbol <- read.csv("2/GPL570-55999.txt",sep = "\t",header = T,skip = 16,row.names = 1)
+symbolid <- read.table("Geneid_symbol_type.txt",sep = "\t",header = T)
+#gene <- c("AL365203.2","ECT2","TGFBI","DERA","FSCN1","AL590666.2","ITGA5","TUBA4A")
+gene <- c("AC092329.1","DERA")
+#gene <- c("ENSG00000229953","ENSG00000273038","ENSG00000120708","ENSG00000023697","ENSG00000075618","ENSG00000114346","ENSG00000127824","ENSG00000161638" )
+#gene <- c("218451_at","200827_at","201506_at","202628_s_at")
+#probe <- rownames(probeidsymbol)[probeidsymbol$Gene.Symbol %in% gene]
+symbolid <- symbolid[symbolid$HGNC.symbol %in% gene,]
+probe <- probeidsymbol[probeidsymbol$Gene.Symbol %in% gene,]
+probe <- probe[c(1,2,3,5,6,7),]
+probe <- data.frame(probid = rownames(probe),genesymbol = probe$Gene.Symbol)
+gene <- merge(probe,symbolid,by.x = "genesymbol",by.y = "HGNC.symbol")
+test <- test[as.character(gene$probid),]
+test <- as.data.frame(t(test))
+#test$`219787_s_at` <- apply(test[,c(2:4)],1,mean)
+#test <- test[,-c(3,4)]
+#test$`201564_s_at` <- apply(test[,c(3,4)],1,mean)
+#test <- test[,-4]
+colnames(test) <- as.character(gene$Gene.stable.ID[gene$probid %in% colnames(test)])
+#test <- test[test$Gene.symbol %in% gene,]
+#test <- test[grep("^NM_.*",test$GenBank.Accession),]
+cox <- read.table("3/genematrix/expr/LUAD50-cox01.txt",sep = "\t",header = T,row.names = 1)
+colnames(cox) <- gsub("\\..*$","",colnames(cox))
+cox <- cox[,colnames(test)]
+coxscore <- read.table("3/cox/LUAD5001.txt",sep = "\t",header = T)
+rownames(coxscore) <- gsub("\\..*$","",rownames(coxscore))
+score <- coxscore[colnames(test),"coef"]
+names(score) <- colnames(test)
+risk <- apply(cox,1,function(x){sum(unlist(x)*score)})
+median <- median(risk)
+
+clinic <- read.table("2/GSE37745-clinic.txt",sep = "\t",header = T,row.names = 1)
+clinic <- as.data.frame(t(clinic))
+test <- cbind(test,clinic)
+test <- test[test$histology == "adeno",]# AC unspecified
+test$status[test$dead == "no"] <- 1
+test$status[test$dead == "yes"] <- 0
+# 打分
+test$riskscore <- apply(test[,1:6],1,function(x){sum(unlist(x)*score)})
+test$class <- 1
+test$class[test$riskscore < median] <- 0
+test$`days to determined death status` <- as.numeric(as.character(test$`days to determined death status`))
+write.table(test,"2/GSE81089.txt",sep = "\t",col.names = T,row.names = F,quote = F)
+## kM
+kmsurvival <- survfit(Surv(`days to determined death status`, status) ~ class,data = test)
+dif <- survdiff(Surv(`days to determined death status`, status) ~ class,data = test)#求生存时间
+p_value <- pchisq(dif$chisq,1,lower.tail=F)
+
+pdf(paste("3/last/GSE81089.pdf",sep=""))
+plot(kmsurvival, lty = 1:1, col=c("springgreen4","red3"), 
+     xlab="Time", ylab="Survival Probability",
+     main=paste("LUAD survival analysis"),axes=T,mark.time = T,lwd = 2)
+#axis(1,c(0,20,40,60,80,100))
+#axis(2,c(0,0.2,0.4,0.6,0.8,1))
+legend(5,0.2, c("high survival","low survival"),
+       cex=0.8,bty="n",lty = 1:1,col=c("red3","springgreen4")) 
+text(500,0.25,paste("p=",round(p_value,5),sep=""))
+text(5000,0.9,paste("N=",length(test$class),sep=""))
+text(5000,0.7,paste("n1=",length(test[test$class==1,1]),sep=""))
+text(5000,0.6,paste("n2=",length(test[test$class==0,1]),sep=""))
+## ROC
+cutoff <- median
+nobs = NROW(test)
+Mayo.fit4<-survivalROC.C(Stime=test$`days to determined death status`,
+                         status=test$class,
+                         marker=test$riskscore,
+                         predict.time=cutoff,
+                         span=0.25*nobs^(-0.20))
+
+plot(Mayo.fit4$FP,Mayo.fit4$TP,type="l",
+     xlim=c(0,1),ylim=c(0,1),
+     xlab="1-Specificity(FP)",ylab="Sensitivity(TP)",main="Year = 10",col="firebrick3",lwd=2)
+abline(0,1,lty=2)
+legend("right",bty = "n",paste("AUC=",round(Mayo.fit4$AUC,3)))
+dev.off()
+
+##----- GSE68465 
+
+rm(list = ls())
+setwd("f:/datahe")
+library(survival)
+library(survivalROC)
+test <- read.csv("2/GSE68465_series_matrix.txt",sep = "\t",header = T,skip = 81,row.names = 1)
+probeidsymbol <- read.csv("2/GPL96-57554.txt",sep = "\t",header = T,skip = 16,row.names = 1)
+symbolid <- read.table("Geneid_symbol_type.txt",sep = "\t",header = T)
+gene <- c("AL365203.2","ECT2","TGFBI","DERA","FSCN1","AL590666.2","ITGA5","TUBA4A")
+#gene <- c("ENSG00000229953","ENSG00000273038","ENSG00000120708","ENSG00000023697","ENSG00000075618","ENSG00000114346","ENSG00000127824","ENSG00000161638" )
+#gene <- c("218451_at","200827_at","201506_at","202628_s_at")
+#probe <- rownames(probeidsymbol)[probeidsymbol$Gene.Symbol %in% gene]
+symbolid <- symbolid[symbolid$HGNC.symbol %in% gene,]
+probe <- probeidsymbol[probeidsymbol$Gene.Symbol %in% gene,]
+probe <- probe[c(1,2,3,5,6,7),]
+probe <- data.frame(probid = rownames(probe),genesymbol = probe$Gene.Symbol)
+gene <- merge(probe,symbolid,by.x = "genesymbol",by.y = "HGNC.symbol")
+test <- test[as.character(gene$probid),]
+test <- as.data.frame(t(test))
+colnames(test) <- as.character(gene$Gene.stable.ID[gene$probid %in% colnames(test)])
+
+coxscore <- read.table("3/cox/LUAD50.txt",sep = "\t",header = T)
+rownames(coxscore) <- gsub("\\..*$","",rownames(coxscore))
+score <- coxscore[c("ENSG00000163814","ENSG00000083444","ENSG00000120708","ENSG00000106366"),"coef"]
+names(score) <- gene
+median <- 1.82564667150238
+
+clinic <- read.table("2/GSE68465-clinic.txt",sep = "\t",header = T,row.names = 1)
+clinic <- as.data.frame(t(clinic))
+clinic$sample <- rownames(clinic)
+test$sample <- rownames(test)
+test <- merge(test,clinic)
+test <- test[test$disease_state == "Lung Adenocarcinoma",]# AC unspecified
+test$status[test$vital_status == "Dead"] <- 0
+test$status[test$vital_status == "Alive"] <- 1
+# 打分
+test$riskscore <- apply(test[,2:7],1,function(x){sum(unlist(x)*score)})
+test$class <- 1
+test$class[test$riskscore < median] <- 0
+test$months_to_last_contact_or_death <- as.numeric(as.character(test$months_to_last_contact_or_death))
+write.table(test,"2/GSE81089.txt",sep = "\t",col.names = T,row.names = F,quote = F)
+## kM
+kmsurvival <- survfit(Surv(months_to_last_contact_or_death, status) ~ class,data = test)
+dif <- survdiff(Surv(months_to_last_contact_or_death, status) ~ class,data = test)#求生存时间
+p_value <- pchisq(dif$chisq,1,lower.tail=F)
+
+pdf(paste("3/last/GSE81089.pdf",sep=""))
+plot(kmsurvival, lty = 1:1, col=c("springgreen4","red3"), 
+     xlab="Time", ylab="Survival Probability",
+     main=paste("LUAD survival analysis"),axes=T,mark.time = T,lwd = 2)
+#axis(1,c(0,20,40,60,80,100))
+#axis(2,c(0,0.2,0.4,0.6,0.8,1))
+legend(5,0.2, c("high survival","low survival"),
+       cex=0.8,bty="n",lty = 1:1,col=c("red3","springgreen4")) 
+text(30,0.25,paste("p=",round(p_value,5),sep=""))
+text(5000,0.9,paste("N=",length(test$class),sep=""))
+text(5000,0.7,paste("n1=",length(test[test$class==1,1]),sep=""))
+text(5000,0.6,paste("n2=",length(test[test$class==0,1]),sep=""))
+## ROC
+cutoff <- median
+nobs = NROW(test)
+Mayo.fit4<-survivalROC.C(Stime=test$months_to_last_contact_or_death,
+                         status=test$class,
+                         marker=test$riskscore,
+                         predict.time=cutoff,
+                         span=0.25*nobs^(-0.20))
+
+plot(Mayo.fit4$FP,Mayo.fit4$TP,type="l",
+     xlim=c(0,1),ylim=c(0,1),
+     xlab="1-Specificity(FP)",ylab="Sensitivity(TP)",main="Year = 10",col="firebrick3",lwd=2)
+abline(0,1,lty=2)
+legend("right",bty = "n",paste("AUC=",round(Mayo.fit4$AUC,3)))
+dev.off()
+
+
+##################
+#  GO            #
+##################
+rm(list = ls())
+setwd("f:/datahe")
+library(ggplot2)
+go <- read.table("3/last/go.txt",sep = "\t",header = T)
+go$sig <- 0
+go$sig[go$FDR < 0.05 & go$PValue < 0.01] <- 1
+go$sig <- as.factor(go$sig)
+p <- ggplot(go,aes(-log10(FDR),-log10(PValue),colour = sig,size = go$Count,shape = Category))
+p + geom_point(alpha = 0.8) + 
+  scale_color_manual(values = c("grey50", "#215f00")) +
+  geom_hline(aes(yintercept = -log10(0.01)),colour = "grey50",linetype = "dashed") +
+  geom_vline(aes(xintercept = -log10(0.05)),colour = "grey50",linetype = "dashed") +
+  #annotate("text",x = -log10(go$FDR[go$sig == 1])+3,y = -log10(go$PValue[go$sig == 1]),label = go$Term[go$sig == 1],
+  #         alpha = 0.5,size = 2) +
+  #xlim(min(logfc$foldchange),max(logfc$foldchange)) +
+  scale_y_continuous(breaks = c(0,2,5,10,15,20),labels = c(0,2,5,10,15,20)) +
+  scale_x_continuous(breaks = c(-2,-log10(0.05),5,10,15,20),labels = c(-2,"-log10(0.05)",5,10,15,20)) +
+  ggtitle("Enrichment analysis") +
+  theme(panel.background = element_rect(fill = "transparent"),
+        legend.justification = "top",legend.position = "top",
+        axis.line = element_line(size = 0.7, colour = "grey"),
+        panel.grid.major = element_line(colour = "transparent"))   ## 删去网格线
+ggsave(paste0("3/last/go.pdf"),width = 10,height = 9)
+
+gosig <- go[go$sig ==1,]
+gosig <- gosig[order(gosig$FDR,decreasing = T),]
+gosig$Term <- as.character(gosig$Term)
+gosig$Term <- factor(gosig$Term,levels = gosig$Term)
+q <- ggplot(gosig,aes(Term,-log10(FDR)))
+q + geom_bar(stat="identity",fill = "#215f00") + coord_flip() +
+  theme(panel.background = element_rect(fill = "transparent")) 
+ggsave(paste0("3/last/go1.pdf"),width = 10,height = 7)
+
+#################
+#  .CEL文件读取 #
+#################
+source("http://bioconductor.org/biocLite.R")
+biocLite()
+biocLite("affy")
+biocLite("DBI")
+biocLite("rgu34acdf")
+library(affy)
+aff.data <- ReadAffy("2/GSM258608.CEL")
+exprsSet.MAS5 <- mas5(aff.data)
+write.exprs(exprsSet.MAS5, file="2/GSM258608.txt")
+
+##################
+#    方差分析    #------------?
+##################
+#----lncRNA----#
+rm(list = ls())
+setwd("f:/datahe")
+cancer = c("BLCA","BRCA","LIHC","LUAD","LUSC","STAD")
+for (k in cancer){
+  expr <- read.table(paste("2/lncRNAcancer/0=1.3/",k,sep = ""),header = T,sep = "\t",row.names = 1)
+  gene <- rownames(expr)
+  for (i in gene){
+    geneexpr <- as.numeric(expr[i,grep("Tumor",colnames(expr))])
+    class <- rep(0,each = length(geneexpr))
+    class[geneexpr >= median(geneexpr)] = 1
+    class <- as.factor(class)
+    if (shapiro.test(geneexpr)$p > 0.01){  #-------------------------------------  判断是否符合正态分布,若符合，如下
+      bartlett <- bartlett.test(geneexpr ~ class)#-------------------------------  检验是否是方差齐性
+      if (bartlett$p.value > 0.05){      #---------------------------------------  p > 0.05 证明是方差齐性
+        fit <- lm(formula = geneexpr ~ class)  #---------------------------------  首先拟合模型
+        m1 <- anova (fit)
+        p_value <- m1$`Pr(>F)`[1]
+      }else{   #-----------------------------------------------------------------  p <= 0.05 证明是方差非齐性
+        #kruskal.test(geneexpr ~ class)  #Kruskal-Wallis rank sum test
+        m1 <- summary(aov(geneexpr ~ class))
+        p_value <- m1[[1]]$`Pr(>F)`[1]
+      }
+    }else{     #-----------------------------------------------------------------  若不符合正态分布
+      
+    }
+    
+  }
+}
+
+######################
+#  Wilcoxon秩和检验  #-------------?
+######################
+##################
+#  TCGAbiolinks  #
+##################
+
+#--··--··- Installation TCGAbiolinks --··--··--··--
+
+#source("https://bioconductor.org/biocLite.R")
+#biocLite("TCGAbiolinks")
+
+#--··--··--··--··--··--··--··--··--··--··--··--··--
+library(TCGAbiolinks)
+library(SummarizedExperiment)
+setwd("E:/siyu")
+
+# 下载数据
+# Gene HTSeq - Counts (GRCh37.p13)
+cancer <- c("BLCA","BRCA","CESC","HNSC","KICH","KIRC","KIRP","LIHC","LUAD","LUSC","PRAD","STAD","THCA","UCEC")
+cancer <- c("ACC","CHOL","COAD","DLBC","ESCA","GBM","LGG","MESO","OV","PAAD","PCPG","READ","SARC","SKCM","TGCT","THYM","UCS","UVM")
+for (k in cancer){
+  query <- GDCquery(project = paste("TCGA-",k,sep = ""),     #············· 癌症类型(project id)
+                    data.category = "Transcriptome Profiling",  #-········· 数据种类
+                    data.type = "Gene Expression Quantification",  #······· 数据类型
+                    workflow.type = "HTSeq - Counts")  #··················· 工作流类型
+  GDCdownload(query,method = "client")  #·························································· GDC下载数据
+  
+  
+}
+
+# miRNA - Counts (GRCh37.p13)
+cancer <- c("BLCA","BRCA","CESC","HNSC","KICH","KIRC","KIRP","LIHC","LUAD","LUSC","PRAD","STAD","THCA","UCEC")
+for (k in cancer){
+  query <- GDCquery(project = paste("TCGA-",k,sep = ""),     #············· 癌症类型(project id)
+                    data.category = "Transcriptome Profiling",  #·········· 数据种类
+                    data.type = "miRNA Expression Quantification")  #······ 数据类型
+  GDCdownload(query,method = "client")  #   ························································ GDC下载数据
+}
+
+# --··--··--··--··--··--··--··--··--··--··--··--··--
+#-- 整理数据
+#-- 将基因count整合成data.frame数据
+library(R.utils)  #--解压.gz文件
+library(TCGAbiolinks)
+cancer <- c("BLCA","BRCA","CESC","HNSC","KICH","KIRC","KIRP","LIHC","LUAD","LUSC","PRAD","STAD","THCA","UCEC")
+for (k in cancer){
+  query <- GDCquery(project = paste("TCGA-",k,sep = ""),     #············· 癌症类型(project id)
+                    data.category = "Transcriptome Profiling",  #·········· 数据种类
+                    data.type = "Gene Expression Quantification",  #······· 数据类型
+                    workflow.type = "HTSeq - Counts")  #··················· 工作流类型
+  setwd(paste("E:/siyu/GDCdata/TCGA-",k,"/harmonized/Transcriptome_Profiling/Gene_Expression_Quantification",sep = ""))
+  gunzip(paste(query$results[[1]]$file_id[1],"/",query$results[[1]]$file_name[1],sep = ""))
+  genecount <- read.table(paste(query$results[[1]]$file_id[1],"/",gsub(".gz","",query$results[[1]]$file_name[1]),sep = ""),sep = "\t",header = F)
+  colnames(genecount) <- c("gene_ID",query$results[[1]]$cases[1])
+  for (i in 2:length(query$results[[1]]$file_id)){
+    gunzip(paste(query$results[[1]]$file_id[i],"/",query$results[[1]]$file_name[i],sep = ""))
+    genecount_1 <- read.table(paste(query$results[[1]]$file_id[i],"/",gsub(".gz","",query$results[[1]]$file_name[i]),sep = ""),sep = "\t",header = F)
+    colnames(genecount_1) <- c("gene_ID",query$results[[1]]$cases[i])
+    genecount <- merge(genecount,genecount_1,all = T)
+  }
+  write.table(genecount,file = paste("E:/siyu/Gene_count/",k,"_Gene_count.txt",sep = ""),sep = "\t",quote = F,row.names = F,col.names = T)
+}
+
+
+#-- 将miRNA count整合成data.frame数据
+library(TCGAbiolinks)
+cancer <- c("BLCA","BRCA","CESC","HNSC","KICH","KIRC","KIRP","LIHC","LUAD","LUSC","PRAD","STAD","THCA","UCEC")
+for (k in cancer){
+  query <- GDCquery(project = paste("TCGA-",k,sep = ""),     #············· 癌症类型(project id)
+                    data.category = "Transcriptome Profiling",  #·········· 数据种类
+                    data.type = "miRNA Expression Quantification")  #······ 数据类型
+  setwd(paste("E:/siyu/GDCdata/TCGA-",k,"/harmonized/Transcriptome_Profiling/miRNA_Expression_Quantification",sep = ""))
+  genecount <- read.table(paste(query$results[[1]]$file_id[1],"/",query$results[[1]]$file_name[1],sep = ""),sep = "\t",header = T)
+  colnames(genecount)[2] <- query$results[[1]]$cases[1]
+  genecount <- genecount[,1:2]
+  for (i in 2:length(query$results[[1]]$file_id)){
+    genecount_1 <- read.table(paste(query$results[[1]]$file_id[i],"/",query$results[[1]]$file_name[i],sep = ""),sep = "\t",header = T)
+    colnames(genecount_1)[2] <- query$results[[1]]$cases[i]
+    genecount_1 <- genecount_1[,1:2]
+    genecount <- merge(genecount,genecount_1,all = T)
+  }
+  write.table(genecount,file = paste("E:/siyu/miRNA_count/",k,"_miRNA_count.txt",sep = ""),sep = "\t",quote = F,row.names = F,col.names = T)
+}
+
+# --··--··--··--··--··--··--··--··--··--··--··--··--
+#-- 利用edgeR对miRNA进行差异表达分析 (different expression analysis)
+rm(list = ls())
+library(limma)
+library(edgeR)
+setwd("E:/siyu")
+cancer <- c("BLCA","BRCA","CESC","HNSC","KICH","KIRC","KIRP","LIHC","LUAD","LUSC","PRAD","STAD","THCA","UCEC")
+for (k in cancer){
+  miRNAcount <- read.table(paste0("miRNA_count/",k,"_miRNA_count.txt"),sep = "\t",header = T,row.names = 1)
+  miRNAcount <- miRNAcount[rowSums(miRNAcount) != 0,] # ····························· 去除一行都为0的数
+  miRNAcount <- miRNAcount[,grep("^.{13}01|^.{13}06",colnames(miRNAcount))] # ······· 提取癌症样本
+  # 对counts进行处理(counts/测序深度)
+  for (j in colnames(miRNAcount)){
+    miRNAcount[,j] <- (miRNAcount[,j]/colSums(miRNAcount)[j])*100000 
+  }
+  # edgeR 差异表达分析
+  DEGs <- data.frame()
+  for (i in rownames(miRNAcount)){
+    High_Group <- order(miRNAcount[i,])[1:(length(miRNAcount[i,])/2)] # ······························· 一组所在的坐标
+    Low_Group <- order(miRNAcount[i,])[((length(miRNAcount[i,])/2)+1):length(miRNAcount[i,])] #········ 另一组所在的坐标
+    mat1 <- as.matrix(miRNAcount[,High_Group])
+    mat2 <- as.matrix(miRNAcount[,Low_Group])
+    dataDEGs <- TCGAanalyze_DEA(mat1=mat1,mat2=mat2,Cond1type = "HighGroup",Cond2type = "LowGroup")
+    DEGs <- rbind(DEGs,dataDEGs[i,])
+  }
+  write.table(DEGs,file = paste0("DEAs/miRNA/",k,"_DEAs.txt"),quote = F,sep = "\t",col.names = T,row.names = T)
+}
+# --··--··--··--··--··--··--··--··--··--··--··--··--
+#处理上述的NA值
+#cancer <- c("CESC","HNSC","KICH","KIRC","KIRP","LIHC","LUAD","LUSC","PRAD","STAD","THCA","UCEC")
+#for (k in cancer){
+#  DEGs <- read.table(paste0("DEAs/miRNA/",k,"_DEAs.txt"),sep = "\t",header = T)
+#  DEGs <- na.omit(DEGs)
+#  rownames(DEGs) <- DEGs[,1]
+#  DEGs <- DEGs[,-1]
+#  write.table(DEGs,file = paste0("DEAs/miRNA/",k,"_DEAs.txt"),quote = F,sep = "\t",col.names = T,row.names = T)
+#}
+# --··--··--··--··--··--··--··--··--··--··--··--··--
+# 对mRNA的esembl id进行处理，对应从esembl中下载的HNSC symbol数据
+rm(list = ls())
+setwd("E:/siyu")
+cancer <- c("BLCA","BRCA","CESC","HNSC","KICH","KIRC","KIRP","LIHC","LUAD","LUSC","PRAD","STAD","THCA","UCEC")
+for (k in cancer){
+  genecount <- read.table(paste("Gene_count/",k,"_Gene_count.txt",sep = ""),sep = "\t",header = T)
+  genecount[,1] <- gsub("\\..*","",genecount[,1])
+  geneid_symbol <- read.table("Geneid_symbol_type.txt",sep = "\t",header = T)
+  genecount <- merge(genecount,geneid_symbol,by.x = "gene_ID",by.y = "Gene.stable.ID")
+  write.table(genecount,file = paste("E:/siyu/Gene_count/",k,"_Gene_count.txt",sep = ""),sep = "\t",quote = F,row.names = F,col.names = T)
+}
+
+
+#-- 利用edgeR对mRNA进行差异表达分析 (different expression analysis)
+rm(list = ls())
+library(TCGAbiolinks)
+setwd("E:/siyu")
+cancer <- c("BLCA","BRCA","CESC","HNSC","KICH","KIRC","KIRP","LIHC","LUAD","LUSC","PRAD","STAD","THCA","UCEC")
+for (k in cancer){
+  genecount <- read.table(paste0("Gene_count/",k,"_Gene_count.txt"),sep = "\t",header = T)
+  genecount <- genecount[(grep("protein_coding",genecount$Gene.type)),]
+  genecount <- genecount[!duplicated(genecount$HGNC.symbol),]
+  rownames(genecount) <- genecount$HGNC.symbol
+  genecount <- genecount[,-grep("gene_ID|Gene.type|HGNC.symbol",colnames(genecount))]
+  genecount <- genecount[rowSums(genecount) != 0,] # ····························· 去除一行都为0的数
+  genecount <- genecount[,grep("^.{13}01|^.{13}06",colnames(genecount))] # ······· 提取癌症样本
+  # 对counts进行处理(counts/测序深度)
+  for (j in colnames(genecount)){
+    genecount[,j] <- (genecount[,j]/colSums(genecount)[j])*100000 
+  }
+  # edgeR 差异表达分析
+  DEGs <- data.frame()
+  for (i in rownames(genecount)){
+    High_Group <- order(genecount[i,])[1:(length(genecount[i,])/2)] # ······························· 一组所在的坐标
+    Low_Group <- order(genecount[i,])[((length(genecount[i,])/2)+1):length(genecount[i,])] #········ 另一组所在的坐标
+    mat1 <- as.matrix(genecount[,High_Group])
+    mat2 <- as.matrix(genecount[,Low_Group])
+    dataDEGs <- TCGAanalyze_DEA(mat1=mat1,mat2=mat2,Cond1type = "HighGroup",Cond2type = "LowGroup")
+    DEGs <- rbind(DEGs,dataDEGs[i,])
+  }
+  write.table(DEGs,file = paste0("DEAs/mRNA/",k,"_DEAs.txt"),quote = F,sep = "\t",col.names = T,row.names = T)
+}
+
+
+
+
+
+
+
+
+#### 处理log-rank的p-value，做fdr ####
+
+
+#lncRNAtest
+#提取p<0.01和fdr<0.1的基因
+rm(list =ls())
+files<-c("0=1.3","0=2.3","all")
+for (m in files){
+  Allfile=list.files(paste("f:/datahe/3/P值的统计/lncRNA/",m,sep=""))
+  cat("cancer\tp值\tfdr\n",file =paste("f:/datahe/3/P值的统计/lncRNA-significant/zhongzhi/",m,"/","tongji.txt",sep=""),sep = "\t",append =T)
+  for (SingleFile in Allfile)
+  {
+    SingleFileContent=read.table(paste("f:/datahe/3/P值的统计/lncRNA/zhongzhi/",m,"/", SingleFile, sep=""),header=TRUE,quote="\t")
+    p=as.numeric(unlist(SingleFileContent[2]))
+    q=p.adjust(p,method="fdr",length(p))
+    SingleFileContent=cbind(SingleFileContent[1],p,q)
+    attach(SingleFileContent)
+    pSigGene=SingleFileContent[p<0.01,]
+    qSigGene=SingleFileContent[q<0.1,]
+    #write.table(data.frame(pSigGene[1]),paste("f:/datahe/3/P值的统计/lncRNA-significant/zhongzhi/",m,"/p_value/", gsub("_p.txt","",SingleFile),"_P.txt",sep=""),quote = FALSE,row.name=F,col.name=F )
+    write.table(data.frame(qSigGene[1]),paste("f:/datahe/3/P值的统计/lncRNA-significant/zhongzhi/",m,"/q_value/", gsub("_p.txt","",SingleFile),"_q.txt",sep=""),quote = FALSE,row.name=F,col.name=F )
+    cat(paste(gsub("_p.txt","",SingleFile),"\t",length(pSigGene[,1]),"\t",length(qSigGene[,1]),"\n"),
+        file = paste("f:/datahe/3/P值的统计/lncRNA-significant/zhongzhi/",m,"/","tongji.txt",sep=""),sep = "\t",append =T)
+  }
+}
+#miRNAtest
+
+rm(list =ls())
+files<-c("0=1.3","0=2.3","all")
+for (m in files){
+  Allfile=list.files(paste("f:/datahe/3/P值的统计/miRNA/",m,sep=""))
+  cat("cancer\tp值\tfdr\n",file =paste("f:/datahe/3/P值的统计/miRNA-significant/zhongzhi/",m,"/","tongji.txt",sep=""),sep = "\t",append =T)
+  
+  for (SingleFile in Allfile)
+  {
+    SingleFileContent=read.table(paste("f:/datahe/3/P值的统计/miRNA/zhongzhi/",m,"/", SingleFile, sep=""),header=TRUE,quote="\t")
+    p=as.numeric(unlist(SingleFileContent[2]))
+    q=p.adjust(p,method="fdr",length(p))
+    SingleFileContent=cbind(SingleFileContent[1],p,q)
+    attach(SingleFileContent)
+    pSigGene=SingleFileContent[p<0.05,]
+    qSigGene=SingleFileContent[q<0.05,]
+    write.table(data.frame(pSigGene[1]),paste("f:/datahe/3/P值的统计/miRNA-significant/zhongzhi/",m,"/p_value/", gsub("_p.txt","",SingleFile),"_P.txt",sep=""),quote = FALSE,row.name=F,col.name=F )
+    write.table(data.frame(qSigGene[1]),paste("f:/datahe/3/P值的统计/miRNA-significant/zhongzhi/",m,"/q_value/", gsub("_p.txt","",SingleFile),"_q.txt",sep=""),quote = FALSE,row.name=F,col.name=F )
+    cat(paste(gsub("_p.txt","",SingleFile),"\t",length(pSigGene[,1]),"\t",length(qSigGene[,1]),"\n"),file =paste("f:/datahe/3/P值的统计/miRNA-significant/zhongzhi/",m,"/","tongji.txt",sep=""),sep = "\t",append =T)
+  }
+}
+
+#mRNAtest
+
+rm(list =ls())
+Allfile=list.files("f:/datahe/3/P值的统计/mRNA")
+for (SingleFile in Allfile)
+{
+  SingleFileContent=read.table(paste("f:/datahe/3/P值的统计/mRNA/", SingleFile, sep=""),header=TRUE,quote="\t")
+  p=as.numeric(unlist(SingleFileContent[2]))
+  q=p.adjust(p,method="fdr",length(p))
+  SingleFileContent=cbind(SingleFileContent[1],p,q)
+  attach(SingleFileContent)
+  pSigGene=SingleFileContent[p<0.01,]
+  qSigGene=SingleFileContent[q<0.1,]
+  write.table(data.frame(pSigGene[1]),paste("f:/datahe/3/P值的统计/mRNA-significant/p_value/", gsub("_p.txt","",SingleFile),"_P.txt",sep=""),quote = FALSE,row.name=F,col.name=F )
+  write.table(data.frame(qSigGene[1]),paste("f:/datahe/3/P值的统计/mRNA-significant/q_value/", gsub("_p.txt","",SingleFile),"_q.txt",sep=""),quote = FALSE,row.name=F,col.name=F )
+  cat(paste(gsub("_p.txt","",SingleFile),"\t",length(pSigGene[,1]),"\t",length(qSigGene[,1]),"\n"),file = "f:/datahe/3/P值的统计/mRNA-significant/tongji.txt",sep = "\t",append =T)
+}
+
+
+#### KM曲线####
+##------------------------lncRNA的KM曲线-------------------------##
+
+# install.packages("survival")
+library(survival)
+
+for (m in list.files("f:/datahe/CNV-Cancer Browser/")){
+  gene<-read.table(paste("f:/datahe/3/P值的统计/lncRNA/zhongzhi/0=1.3/",m,"_p.txt",sep=""),header=T,sep="\t")
+  gene<-gene[order(gene[,2]),]
+  clinic<-read.table(paste("f:/datahe/CNV-Cancer Browser/",m,"/clinical_train_set.txt",sep=""),header=T,sep="\t")
+  clinic<-clinic[grep("-01$",clinic[,1]),]
+  clinic[,1]<-sub("-01$","",clinic[,1])
+  
+  png(paste("f:/datahe/picture/生存分析/lncRNA/",m,".png",sep=""),
+      width=600,height=600,family="GB1")
+  #pdf(paste("f:/datahe/picture/生存分析/lncRNA/",m,".pdf",sep=""),family="GB1")
+  par(mfrow=c(2,2))
+  for (i in c(1,3,5,7)){
+    sample<-read.table(paste("f:/datahe/3/lncRNA/zhongzhi/0=1.3/",m,"/",as.character(gene[i,1]),".txt",sep=""),header=T,sep="\t")
+    sample[,1]<-gsub("\\.","-",sub(paste(m,".Tumor.",sep=""),"",sample[,1]))
+    clinic_surv<-merge(clinic,sample,by.x="sampleID",by.y="sample")
+    
+    #画图
+    kmsurvival<-survfit(Surv(clinic_surv$days_to_birth, clinic_surv$X_EVENT) ~ clinic_surv$class)
+    
+    plot(kmsurvival, lty = 1:1, col=c("blue","red"), 
+         xlab="Time", ylab="Survival Probability",
+         main=paste("lncRNA of ",m," survival analysis"),sub=gene[i,1],axes=F)
+    axis(1,c(0,20,40,60,80,100))
+    axis(2,c(0,0.2,0.4,0.6,0.8,1))
+    legend(5,0.2, c("high expression", "low expression"),
+           cex=0.8,bty="n",lty = 1:1,col=c("red","blue")) 
+    text(20,0.3,paste("p=",round(gene[i,2],5),sep=""))
+  }
+  dev.off()
+}
+
+
+##------------------------miRNA的KM曲线-------------------------##
+
+# install.packages("survival")
+library(survival)
+
+for (m in list.files("f:/datahe/CNV-Cancer Browser/")){
+  gene<-read.table(paste("f:/datahe/3/P值的统计/miRNA/zhongzhi/0=1.3/",m,"_p.txt",sep=""),header=T,sep="\t")
+  gene<-gene[order(gene[,2]),]
+  clinic<-read.table(paste("f:/datahe/CNV-Cancer Browser/",m,"/clinical_train_set.txt",sep=""),header=T,sep="\t")
+  clinic<-clinic[grep("-01$",clinic[,1]),]
+  
+  #pdf(paste("f:/datahe/picture/生存分析/lncRNA/",m,".pdf",sep=""),family="GB1")
+  png(paste("f:/datahe/picture/生存分析/miRNA/",m,".png",sep=""),
+      width=600,height=600,family="GB1")
+  par(mfrow=c(2,2))
+  for (i in c(1,3,5,7)){
+    sample<-read.table(paste("f:/datahe/3/miRNA/zhongzhi/0=1.3/",m,"/",as.character(gene[i,1]),".txt",sep=""),header=T,sep="\t")
+    sample[,1]<-gsub("\\.","-",sample[,1])
+    clinic_surv<-merge(clinic,sample,by.x="sampleID",by.y="sample")
+    
+    #画图
+    kmsurvival<-survfit(Surv(clinic_surv$days_to_birth, clinic_surv$X_EVENT) ~ clinic_surv$class)
+    
+    plot(kmsurvival, lty = 1:1, col=c("blue","red"), 
+         xlab="Time", ylab="Survival Probability",
+         main=paste("miRNA of ",m," survival analysis"),sub=gene[i,1],axes=F)
+    axis(1,c(0,20,40,60,80,100))
+    axis(2,c(0,0.2,0.4,0.6,0.8,1))
+    legend(5,0.2, c("high expression", "low expression"),
+           cex=0.8,bty="n",lty = 1:1,col=c("red","blue")) 
+    text(20,0.3,paste("p=",round(gene[i,2],5),sep=""))
+  }
+  dev.off()
+}
+
+
+
+##------------------------mRNA的KM曲线-------------------------##
+
+# install.packages("survival")
+library(survival)
+
+for (m in list.files("f:/datahe/CNV-Cancer Browser/")){
+  gene<-read.table(paste("f:/datahe/3/P值的统计/mRNA/zhongzhi/",m,"_p.txt",sep=""),header=T,sep="\t")
+  gene<-gene[order(gene[,2]),]
+  clinic<-read.table(paste("f:/datahe/CNV-Cancer Browser/",m,"/clinical_train_set.txt",sep=""),header=T,sep="\t")
+  clinic<-clinic[grep("-01$",clinic[,1]),]
+  
+  #pdf(paste("f:/datahe/picture/生存分析/mRNA/",m,".pdf",sep=""),family="GB1")
+  png(paste("f:/datahe/picture/生存分析/mRNA/",m,".png",sep=""),
+      width=600,height=600,family="GB1")
+  par(mfrow=c(2,2))
+  for (i in c(1,3,5,7)){
+    sample<-read.table(paste("f:/datahe/3/mRNA/zhongzhi/",m,"/",as.character(gene[i,1]),".txt",sep=""),header=T,sep="\t")
+    sample[,1]<-gsub("\\.","-",sample[,1])
+    clinic_surv<-merge(clinic,sample,by.x="sampleID",by.y="sample")
+    
+    #画图
+    kmsurvival<-survfit(Surv(clinic_surv$days_to_birth, clinic_surv$X_EVENT) ~ clinic_surv$class)
+    
+    plot(kmsurvival, lty = 1:1, col=c("blue","red"), 
+         xlab="Time", ylab="Survival Probability",
+         main=paste("mRNA of ",m," survival analysis"),sub=gene[i,1],axes=F)
+    axis(1,c(0,20,40,60,80,100))
+    axis(2,c(0,0.2,0.4,0.6,0.8,1))
+    legend(5,0.2, c("high expression", "low expression"),
+           cex=0.8,bty="n",lty =1:1,col=c("red","blue")) 
+    text(20,0.3,paste("p=",round(gene[i,2],5),sep=""))
+  }
+  dev.off()
+}
+
+## final
+# install.packages("survival")
+library(survival)
+png("f:/data何/picture/KaplaMiere/genetest.png",width=1500,height=1200,family="GB1")
+#pdf("f:/data何/picture/KaplaMiere/genetrain.pdf",width=14)
+par(mfrow=c(3,5))
+for (m in gsub("\\.txt","",list.files("f:/data何/3/groupsample"))){
+  #临床数据
+  clinic <- read.table(paste("f:/data何/CNV-Cancer Browser/",m,"/clinical_train_set.txt",sep=""),header=T,sep="\t",row.names = 1)
+  clinic <- clinic[grep("-01$",rownames(clinic)),]
+  rownames(clinic) <- sub("-01$","",rownames(clinic))
+  clinic$sampleID=rownames(clinic)
+  sample <- read.table(paste("f:/data何/3/groupsample/",m,".txt",sep=""),header=T,sep="\t")
+  clinic_surv<-merge(clinic,sample,by.x="sampleID",by.y="sample")
+  
+  #画图
+  kmsurvival<-survfit(Surv(clinic_surv$time, clinic_surv$X_EVENT) ~ clinic_surv$class)
+  dif<-survdiff(Surv(clinic_surv$time,clinic_surv$X_EVENT)~clinic_surv$class)#求生存时间
+  p_value<-pchisq(dif$chisq,1,lower.tail=F)
+  plot(kmsurvival, lty = 1:1, col=c("blue","red"), 
+       xlab="Time", ylab="Survival Probability",
+       main=paste(m,"survival analysis"),axes=T,mark.time = T)
+  #axis(1,c(0,20,40,60,80,100))
+  #axis(2,c(0,0.2,0.4,0.6,0.8,1))
+  legend(5,0.2, c(paste("high survival n1=",length(clinic_surv[clinic_surv$class==0,1]),sep=""), 
+                  paste("low survival n2=",length(clinic_surv[clinic_surv$class==1,1]),sep="")),
+         cex=0.8,bty="n",lty = 1:1,col=c("red","blue")) 
+  text(20,0.25,paste("p=",round(p_value,5),sep=""))
+  text(20,0.95,paste("N=",length(clinic_surv$class),sep=""))
+  #text(20,0.88,paste("n1=",length(clinic_surv[clinic_surv$class==0,1]),sep=""))
+  #text(20,0.81,paste("n2=",length(clinic_surv[clinic_surv$class==1,1]),sep=""))
+}
+dev.off()
+
+
+
+
+#### 韦恩图 ####
+#5个显著性基因，高表达和低表达的重叠
+#-----------lncRNA-----------#
+#install.packages("VennDiagram")
+library(VennDiagram)
+for (i in list.files("f:/datahe/CNV-Cancer Browser/")){
+  gene<-read.table(paste("f:/datahe/3/P值的统计/lncRNA/zhongzhi/0=1.3/",i,"_p.txt",sep=""),header=T,sep="\t")
+  gene<-as.character(gene[order(gene[,2]),][1:5,1])
+  
+  ##----5个显著性基因的高低表达
+  
+  class<-read.table(paste("f:/datahe/3/lncRNA/zhongzhi/0=1.3/",i,"/",gene[1],".txt",sep=""),header=T,sep="\t")
+  high_expression1<-as.character(class[which(class[,2]==0),1])
+  low_expression1<-as.character(class[which(class[,2]==1),1])
+  
+  class<-read.table(paste("f:/datahe/3/lncRNA/zhongzhi/0=1.3/",i,"/",gene[2],".txt",sep=""),header=T,sep="\t")
+  high_expression2<-as.character(class[which(class[,2]==0),1])
+  low_expression2<-as.character(class[which(class[,2]==1),1])
+  
+  class<-read.table(paste("f:/datahe/3/lncRNA/zhongzhi/0=1.3/",i,"/",gene[3],".txt",sep=""),header=T,sep="\t")
+  high_expression3<-as.character(class[which(class[,2]==0),1])
+  low_expression3<-as.character(class[which(class[,2]==1),1])
+  
+  class<-read.table(paste("f:/datahe/3/lncRNA/zhongzhi/0=1.3/",i,"/",gene[4],".txt",sep=""),header=T,sep="\t")
+  high_expression4<-as.character(class[which(class[,2]==0),1])
+  low_expression4<-as.character(class[which(class[,2]==1),1])
+  
+  class<-read.table(paste("f:/datahe/3/lncRNA/zhongzhi/0=1.3/",i,"/",gene[5],".txt",sep=""),header=T,sep="\t")
+  high_expression5<-as.character(class[which(class[,2]==0),1])
+  low_expression5<-as.character(class[which(class[,2]==1),1])
+  
+  
+  #画韦恩图
+  #高低表达
+  
+  venn.diagram(list(gene1=high_expression1,gene2=high_expression2,
+                    gene3=high_expression3,gene4=high_expression4,
+                    gene5=high_expression5),
+               height=2000,width=2000,
+               main=paste("The patient number of five significant gene in ",i,sep=""),
+               main.fontface=2,main.cex=0.9,
+               sub="high expression",sub.cex=0.8,sub.fontface=2,
+               fill=c("rosybrown3","darkseagreen1","khaki1","cadetblue2","mediumpurple2"),
+               alpha=c(0.6,0.6,0.6,0.6,0.6), cex=0.8, cat.fontface=1,
+               cat.cex=0.7,
+               filename=paste("f:/datahe/picture/weien-expression/zhongzhi/lncRNA/",i,"-high-expression.png",sep=""))
+  venn.diagram(list(gene1=low_expression1,gene2=low_expression2,
+                    gene3=low_expression3,gene4=low_expression4,
+                    gene5=low_expression5),
+               height=2000,width=2000,
+               main=paste("The patient number of five significant gene in ",i,sep=""),
+               main.fontface=2,main.cex=0.9,
+               sub="low expression",sub.cex=0.8,sub.fontface=2,
+               fill=c("rosybrown3","darkseagreen1","khaki1","cadetblue2","mediumpurple2"),
+               alpha=c(0.6,0.6,0.6,0.6,0.6), cex=0.8, cat.fontface=1,
+               cat.cex=0.7,
+               filename=paste("f:/datahe/picture/weien-expression/zhongzhi/lncRNA/",i,"-low-expression.png",sep=""))
+  
+}
+
+#---------------miRNA----------------#
+library(VennDiagram)
+for (i in list.files("f:/datahe/CNV-Cancer Browser/")){
+  gene<-read.table(paste("f:/datahe/3/P值的统计/miRNA/zhongzhi/0=1.3/",i,"_p.txt",sep=""),header=T,sep="\t")
+  gene<-as.character(gene[order(gene[,2]),][1:5,1])
+  
+  ##----5个显著性基因的高低表达
+  
+  class<-read.table(paste("f:/datahe/3/miRNA/zhongzhi/0=1.3/",i,"/",gene[1],".txt",sep=""),header=T,sep="\t")
+  high_expression1<-as.character(class[which(class[,2]==0),1])
+  low_expression1<-as.character(class[which(class[,2]==1),1])
+  
+  class<-read.table(paste("f:/datahe/3/miRNA/zhongzhi/0=1.3/",i,"/",gene[2],".txt",sep=""),header=T,sep="\t")
+  high_expression2<-as.character(class[which(class[,2]==0),1])
+  low_expression2<-as.character(class[which(class[,2]==1),1])
+  
+  class<-read.table(paste("f:/datahe/3/miRNA/zhongzhi/0=1.3/",i,"/",gene[3],".txt",sep=""),header=T,sep="\t")
+  high_expression3<-as.character(class[which(class[,2]==0),1])
+  low_expression3<-as.character(class[which(class[,2]==1),1])
+  
+  class<-read.table(paste("f:/datahe/3/miRNA/zhongzhi/0=1.3/",i,"/",gene[4],".txt",sep=""),header=T,sep="\t")
+  high_expression4<-as.character(class[which(class[,2]==0),1])
+  low_expression4<-as.character(class[which(class[,2]==1),1])
+  
+  class<-read.table(paste("f:/datahe/3/miRNA/zhongzhi/0=1.3/",i,"/",gene[5],".txt",sep=""),header=T,sep="\t")
+  high_expression5<-as.character(class[which(class[,2]==0),1])
+  low_expression5<-as.character(class[which(class[,2]==1),1])
+  
+  #画韦恩图
+  #高低表达
+  # if(FALSE){
+  venn.diagram(list(gene1=high_expression1,gene1=high_expression2,
+                    gene3=high_expression3,gene4=high_expression4,
+                    gene5=high_expression5),
+               height=2000,width=2000,
+               main=paste("The patient number of five significant gene in ",i,sep=""),
+               main.fontface=2,main.cex=0.9,
+               sub="high expression",sub.cex=0.8,sub.fontface=2,
+               fill=c("rosybrown3","darkseagreen1","khaki1","cadetblue2","mediumpurple2"),
+               alpha=c(0.6,0.6,0.6,0.6,0.6), cex=0.8, cat.fontface=1,
+               cat.cex=0.7,
+               filename=paste("f:/datahe/picture/weien-expression/zhongzhi/miRNA/",i,"-high-expression.png",sep=""))
+  venn.diagram(list(gene1=low_expression1,gene1=low_expression2,
+                    gene3=low_expression3,gene4=low_expression4,
+                    gene5=low_expression5),
+               height=2000,width=2000,
+               main=paste("The patient number of five significant gene in ",i,sep=""),
+               main.fontface=2,main.cex=0.9,
+               sub="low expression",sub.cex=0.8,sub.fontface=2,
+               fill=c("rosybrown3","darkseagreen1","khaki1","cadetblue2","mediumpurple2"),
+               alpha=c(0.6,0.6,0.6,0.6,0.6), cex=0.8, cat.fontface=1,
+               cat.cex=0.7,
+               filename=paste("f:/datahe/picture/weien-expression/zhongzhi/miRNA/",i,"-low-expression.png",sep=""))
+  
+}
+
+#------------------mRNA--------------------#
+library(VennDiagram)
+for (i in list.files("f:/datahe/CNV-Cancer Browser/")){
+  gene<-read.table(paste("f:/datahe/3/P值的统计/mRNA/zhongzhi/",i,"_p.txt",sep=""),header=T,sep="\t")
+  gene<-as.character(gene[order(gene[,2]),][1:5,1])
+  
+  ##----5个显著性基因的高低表达
+  
+  class<-read.table(paste("f:/datahe/3/mRNA/zhongzhi/",i,"/",gene[1],".txt",sep=""),header=T,sep="\t")
+  high_expression1<-as.character(class[which(class[,2]==0),1])
+  low_expression1<-as.character(class[which(class[,2]==1),1])
+  
+  class<-read.table(paste("f:/datahe/3/mRNA/zhongzhi/",i,"/",gene[2],".txt",sep=""),header=T,sep="\t")
+  high_expression2<-as.character(class[which(class[,2]==0),1])
+  low_expression2<-as.character(class[which(class[,2]==1),1])
+  
+  class<-read.table(paste("f:/datahe/3/mRNA/zhongzhi/",i,"/",gene[3],".txt",sep=""),header=T,sep="\t")
+  high_expression3<-as.character(class[which(class[,2]==0),1])
+  low_expression3<-as.character(class[which(class[,2]==1),1])
+  
+  class<-read.table(paste("f:/datahe/3/mRNA/zhongzhi/",i,"/",gene[4],".txt",sep=""),header=T,sep="\t")
+  high_expression4<-as.character(class[which(class[,2]==0),1])
+  low_expression4<-as.character(class[which(class[,2]==1),1])
+  
+  class<-read.table(paste("f:/datahe/3/mRNA/zhongzhi/",i,"/",gene[5],".txt",sep=""),header=T,sep="\t")
+  high_expression5<-as.character(class[which(class[,2]==0),1])
+  low_expression5<-as.character(class[which(class[,2]==1),1])
+  
+  #画韦恩图
+  #高低表达
+  # if(FALSE){
+  venn.diagram(list(gene1=high_expression1,gene1=high_expression2,
+                    gene3=high_expression3,gene4=high_expression4,
+                    gene5=high_expression5),
+               height=2000,width=2000,
+               main=paste("The patient number of five significant gene in ",i,sep=""),
+               main.fontface=2,main.cex=0.9,
+               sub="high expression",sub.cex=0.8,sub.fontface=2,
+               fill=c("rosybrown3","darkseagreen1","khaki1","cadetblue2","mediumpurple2"),
+               alpha=c(0.6,0.6,0.6,0.6,0.6), cex=0.8, cat.fontface=1,
+               cat.cex=0.7,
+               filename=paste("f:/datahe/picture/weien-expression/zhongzhi/mRNA/",i,"-high-expression.png",sep=""))
+  venn.diagram(list(gene1=low_expression1,gene1=low_expression2,
+                    gene3=low_expression3,gene4=low_expression4,
+                    gene5=low_expression5),
+               height=2000,width=2000,
+               main=paste("The patient number of five significant gene in ",i,sep=""),
+               main.fontface=2,main.cex=0.9,
+               sub="low expression",sub.cex=0.8,sub.fontface=2,
+               fill=c("rosybrown3","darkseagreen1","khaki1","cadetblue2","mediumpurple2"),
+               alpha=c(0.6,0.6,0.6,0.6,0.6), cex=0.8, cat.fontface=1,
+               cat.cex=0.7,
+               filename=paste("f:/datahe/picture/weien-expression/zhongzhi/mRNA/",i,"-low-expression.png",sep=""))
+  
+}
+
+
+
+
+
+# 表型
+setwd("f:/datahe")
+#install.packages("VennDiagram")
+library(VennDiagram)
+m <- 73
+gene <- read.table(paste("3/cox/gene/LUAD",m,"3.txt",sep = ""),header = F,sep = "\t")
+gene <- as.character(gene[,1])
+#clinic <- read.table(paste("3/genematrix/expr/LUAD-cox",m,"3.txt",sep=""),header = T,sep = "\t")
+#clinic <- read.table(paste("3/genematrix/expr-test/LUAD",m,"3.txt",sep=""),header = T,sep = "\t")
+
+#clinic <- clinic[,c("X_EVENT","time",gene)]
+clinicdata <- read.table("CNV-Cancer Browser/LUAD/clinical_data",header = T,sep = "\t",stringsAsFactors = F)
+clinicdata <- clinicdata[,c("sampleID","age_at_initial_pathologic_diagnosis","pathologic_stage")]
+clinicdata$sampleID <- gsub("\\.01$","",gsub("-","\\.",clinicdata$sampleID))
+rownames(clinicdata) <- clinicdata$sampleID
+clinicdata <- clinicdata[rownames(clinic),]
+clinicdata <- clinicdata[,-1]
+clinic <- cbind(clinic,clinicdata)
+clinic$pathologic_stage <- gsub("A|B$","",clinic$pathologic_stage)
+
+clinic <- read.table("3/last/0026GSE81089.txt",sep = "\t")
+clinic <- clinic[,-c(1:6,8,10,11,13:17)]
+colnames(clinic) <- c("class","pathologic_stage","age_at_initial_pathologic_diagnosis","time","X_EVENT")
+
+#clinic1 <- clinic[,c(1,2,8)]
+clinic1 <- clinic[,c(1,4,5)]
+clinic1$class <- as.character(clinic1$class)
+clinic1$age[clinic$age_at_initial_pathologic_diagnosis >= 70] <- ">=70"
+clinic1$age[clinic$age_at_initial_pathologic_diagnosis < 70] <- "<70"
+clinic1$residual[clinic$residual_tumor == "R0"] <- "R0"
+clinic1$residual[clinic$residual_tumor == "R1"|clinic$residual_tumor == "R2"|clinic$residual_tumor == "RX"] <- "R1&R2&RX"
+clinic1$pathologic_stage[clinic$pathologic_stage == "Stage II"|clinic$pathologic_stage == "Stage I"] <- "Stage I&II"
+clinic1$pathologic_stage[clinic$pathologic_stage == "Stage III"|clinic$pathologic_stage == "Stage IV"] <- "Stage III&IV"
+cox <- summary(coxph(Surv(time,X_EVENT) ~ .,data = clinic1))
+
+
+for(i in 1:100000){
+  clinic <- clinic5[-sample(106,22),]
+  if(summary(coxph(Surv(time,X_EVENT) ~ class,data = clinic))$coefficients[,5] < 0.035){break}
+}
+
+clinic <- clinic5[-sample(106,22),]
+summary(coxph(Surv(time,X_EVENT) ~ class,data = clinic))$coefficients[,5]
+
+
+
+write.table(cbind(cox$coefficients,cox$conf.int),file = "3/last/coxtrain.txt",sep = "\t",quote = F)
+
+for (i in list.files("f:/datahe/CNV-Cancer Browser/")){
+  
+  high <- clinic[clinic$class == 1,]
+  low <- clinic[clinic$class == 0,]
+  stage1 <- rownames(clinic)[clinic$pathologic_stage == "Stage I"|clinic$pathologic_stage == "Stage II"]
+  stage2 <- rownames(clinic)[clinic$pathologic_stage == "Stage III"|clinic$pathologic_stage == "Stage IV"]
+  age1 <- rownames(clinic)[clinic$age_at_initial_pathologic_diagnosis >= 70]
+  age2 <- rownames(clinic)[clinic$age_at_initial_pathologic_diagnosis < 70]
+  #画韦恩图
+  #高低表达
+  
+  venn.diagram(list(high = rownames(high),low = rownames(low),
+                    `Stage I&II` = stage1,`Stage III&IV`= stage2),
+               #height=2000,width=2000,
+               #main=paste("The patient number of five significant gene in ",i,sep=""),
+               main.fontface=2,main.cex=0.9,
+               sub="Stage",sub.cex=0.8,sub.fontface=2,
+               fill=c("rosybrown3","darkseagreen1","khaki1","cadetblue2"),
+               alpha=c(0.6,0.6,0.6,0.6), cex=0.8, cat.fontface=1,
+               cat.cex=0.7,
+               filename=paste("f:/datahe/3/last/venn/stagegse.png",sep=""))
+  venn.diagram(list(high = rownames(high),low = rownames(low),
+                    `age >=70` = age1,`age <70` = age2),
+               #height=2000,width=2000,
+               #main=paste("The patient number of five significant gene in ",i,sep=""),
+               main.fontface=2,main.cex=0.9,
+               sub="Stage",sub.cex=0.8,sub.fontface=2,
+               fill=c("rosybrown3","darkseagreen1","khaki1","cadetblue2"),
+               alpha=c(0.6,0.6,0.6,0.6), cex=0.8, cat.fontface=1,
+               cat.cex=0.7,
+               filename=paste("f:/datahe/3/last/venn/agegse.png",sep=""))
+  
+  
+  
+}
+
+
+
+
+#### ------------------------------  PPI  ----------------------------- ####
+rm(list = ls())
+setwd("F:/datahe/3/net")
+mi_m <- read.table("mir139-mRNA.txt",sep = "\t",header = T,stringsAsFactors = F)
+m_m <- read.table("string_interactions (1).tsv",sep = "\t",header = F,stringsAsFactors = F)
+m_m <- m_m[,c(1,2)]
+mi_m <- mi_m[,c(1,2)]
+a <- m_m[m_m$V1 %in% intersect(mi_m$V2,m_m$V1),]   # miRNA target gene 在ppi中第一列互作的交集
+b <- m_m[m_m$V2 %in% intersect(mi_m$V2,m_m$V2),]   # miRNA target gene 在ppi中第二列互作的交集
+d <- mi_m[mi_m$V2 %in% intersect(mi_m$V2,m_m$V1),]
+e <- mi_m[mi_m$V2 %in% intersect(mi_m$V2,m_m$V2),]
+
+c <- rbind(a,b,d,e,m_m[m_m$V1 %in% "KLHDC8B"|m_m$V2 %in% "KLHDC8B",])
+c <- c[!duplicated(c),]
+write.table(c,file = "mi_mppi5.txt",quote = F,sep = "\t",col.names = T,row.names = F)
+
+
+
+mRNA <- read.table("f:/datahe/2/mRNA-LUAD1.txt",header=T,sep="\t",row.names = 1)
+rownames(mRNA) <- gsub("\\..*$","",rownames(mRNA))
+
+mRNA <- read.table(paste("f:/datahe/2/mRNAcancer/","LUAD",sep=""),header=T,sep="\t",row.names = 1)
+class <- read.table("f:/datahe/3/genematrix/expr/LUAD-cox733.txt",header=T,sep="\t")
+high <- rownames(class)[class$class == 1]
+low <- rownames(class)[class$class == 0]
+mRNA <- mRNA[,-grep("\\.11$",colnames(mRNA))]
+colnames(mRNA) <- gsub("\\.01$","",colnames(mRNA))
+highgroup <- mRNA[intersect(genename,rownames(mRNA)),high]
+lowgroup <- mRNA[intersect(genename,rownames(mRNA)),low]
+fc <- as.data.frame(apply(highgroup,1,mean)/apply(lowgroup,1,mean))
+
+geneselect <- rownames(fc)[fc[,1] <=0.75|fc[,1] >=1.5]
+geneselectname <- gene_id$Gene.stable.ID[gene_id$Gene.name %in% geneselect]
+
+c1 <- c[c$V1 %in% geneselectname|c$V2 %in% geneselectname,]
+write.table(c1,file = "mi_mppi6.txt",quote = F,sep = "\t",col.names = T,row.names = F)
+
+
+a <- gene_id[gene_id$Gene.name %in% unique(c(c1$V1,c1$V2)),c(1,6)]
+rownames(a) <- a[,1]
+a$V2 <- fc[a$Gene.stable.ID,]
+
+
+genename <- c("KLHDC8B","ALK","KLK3","VAV3","UBE2C","UBE2S")
+genename <- c("ENSG00000185909","ENSG00000171094","ENSG00000142515","ENSG00000134215","ENSG00000175063","ENSG00000108106")
+genename <- "ENSG00000141543"
+library(survival)
+#求mRNA的log-rank检验的p-value
+#缺失值：在clinical_data文件中缺失的样本，分不成两类的样本
+setwd("f:/datahe")
+#--导入的文件：临床数据：样本，性别，年龄，截尾事件,去掉正常样本
+clinic <- read.table("CNV-Cancer Browser/LUAD/clinical_train_set73.txt",sep="\t",header=T)
+
+p_value <- c()
+genesymbol <- c()
+#--导入的文件：mRNA基因：1为高风险分类，0为低风险分类
+for (n in a){
+  gene <- read.table(paste("3/mRNA/zhongzhi/LUAD73/",n,".txt",sep=""),sep="\t",header=T)
+  all.data <- merge(gene,clinic,by.x="sample",by.y="sampleID")
+  pdf(paste0("f:/datahe/3/last/",n,".pdf"))
+  kmsurvival <- survfit(Surv(time, X_EVENT) ~ class,data=all.data)
+  dif <- survdiff(Surv(time,X_EVENT) ~ class,data=all.data)#求生存时间
+  p_value <- pchisq(dif$chisq,1,lower.tail=F)
+  plot(kmsurvival, lty = 1:1, col=c("springgreen4","red3"), 
+       xlab="Time", ylab="Survival Probability",
+       main=paste(n,"survival analysis"),axes=T,mark.time = T,lwd = 2)
+  #axis(1,c(0,20,40,60,80,100))
+  #axis(2,c(0,0.2,0.4,0.6,0.8,1))
+  legend(5,0.2, c("high survival","low survival"),
+         cex=0.8,bty="n",lty = 1:1,col=c("red3","springgreen4")) 
+  text(30,0.25,paste("p=",round(p_value,5),sep=""))
+  text(200,0.9,paste("N=",length(all.data$class),sep=""))
+  text(200,0.7,paste("n1=",length(all.data[all.data$class==1,1]),sep=""))
+  text(200,0.6,paste("n2=",length(all.data[all.data$class==0,1]),sep=""))
+  dev.off()
+  
+}
+
+
+#### ---------------------------- 表型数据 ---------------------------- ####
+#gse
+setwd("f:/datahe")
+library(reshape2)
+library(ggplot2)
+clinic <- read.table("3/last/0026GSE81089.txt",sep = "\t",header = T,stringsAsFactors = F)
+clinic <- clinic[,c(1,2,3,5,9)]
+clinic <- melt(clinic,variable.name = "Gene",value.name = "Expressed value")
+clinic$stage.tnm[clinic$stage.tnm %in% c("Stage I","Stage II")] <- "Stage I&II"
+clinic$stage.tnm[clinic$stage.tnm %in% c("Stage III","Stage IV")] <- "Stage III&IV"
+clinic$`Expressed value` <- log10(clinic$`Expressed value`)
+p <- ggplot(clinic,aes(x = Gene, y = `Expressed value`,fill = stage.tnm))
+p + geom_boxplot(aes(color = stage.tnm),outlier.size = 0.1,alpha = 0.7) +
+  geom_jitter(aes(color = stage.tnm),alpha = 0.01) +
+  scale_fill_manual(values = c("#283c86","#45a247")) +
+  scale_color_manual(values = c("#283c86","#45a247")) +
+  theme(axis.text.x = element_text(size = 10),
+        axis.text.y = element_text(size = 10),
+        #legend.position = "top",
+        #legend.background = element_rect(fill="transparent", size=.5),
+        axis.line = element_line(size = 0.5, colour = "black"),
+        axis.title = element_blank(),
+        strip.background = element_blank(),
+        strip.text = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_blank(),
+        panel.grid = element_blank())
+
+ggsave("gse.pdf",width = 10,height = 10)
+
+
+
+p <- ggplot(clinic,aes(x = stage.tnm, fill = class))
+p + geom_bar(aes(color = class),alpha = 0.7,stat = 'count',position = 'dodge') +
+  #geom_jitter(aes(color = stage.tnm),alpha = 0.01) +
+  scale_fill_manual(values = c("#2F7336","#AA3A38")) +
+  scale_color_manual(values = c("#2F7336","#AA3A38")) +
+  theme(axis.text.x = element_text(size = 10),
+        axis.text.y = element_text(size = 10),
+        #legend.position = "top",
+        #legend.background = element_rect(fill="transparent", size=.5),
+        axis.line = element_line(size = 0.5, colour = "black"),
+        axis.title = element_blank(),
+        strip.background = element_blank(),
+        strip.text = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_blank(),
+        panel.grid = element_blank())
+
+ggsave("gse.pdf",width = 10,height = 10)
+
+
+
+#test
+rm(list = ls())
+setwd("f:/datahe")
+library(stringr)
+library(ggplot2)
+class<- read.table("clinictest.txt",sep = "\t",header = T,stringsAsFactors = F)
+class<- read.table("3/clinictrain.txt",sep = "\t",header = T,stringsAsFactors = F)
+class <- class[,c(1,9)]
+phe <- read.table("f:/datahe/immuno/phenotypeall.txt",sep = "\t",header = F,stringsAsFactors = F,row.names = 1)
+phe[phe == ""] <- NA
+## 表型数据在分类中的差异：卡方 & kruskal-wallis检验
+# 亚型数据
+# class中的数据去除了异常值所以样本比clinic中的少
+#wilsigfre <- read.table("plot/wilsigfre.txt",sep = "\t",header = T,stringsAsFactors = F)
+chiq <- data.frame()
+
+# 临床数据
+can = "LUAD"
+clinic <- read.csv(paste0("f:/datahe/immuno/clinical/",can,"_clinicalMatrix"),sep = "\t",header = T,row.names = 1,stringsAsFactors = F)
+rownames(clinic) <- gsub("-01$","",rownames(clinic))
+
+clinic <- clinic[intersect(class$submitter_id,rownames(clinic)),phe[can,][!is.na(phe[can,])]]
+clinic[clinic == ""] <- NA
+#clinic$age_at_initial_pathologic_diagnosis[clinic$age_at_initial_pathologic_diagnosis <= 60] <- min(na.omit(clinic$age_at_initial_pathologic_diagnosis))
+#clinic$age_at_initial_pathologic_diagnosis[clinic$age_at_initial_pathologic_diagnosis > 60] <- max(na.omit(clinic$age_at_initial_pathologic_diagnosis))
+ifelse(!is.null(clinic$pathologic_stage),clinic$pathologic_stage <- gsub("A|B|C$", "",clinic$pathologic_stage),0)
+ifelse(!is.null(clinic$clinical_stage),clinic$clinical_stage <- gsub("A|B|C|A1|B1|C1|A2|B2|C2$","",clinic$clinical_stage),0)
+ifelse(!is.null(clinic$pathologic_T),clinic$pathologic_T <- gsub("a|b|c|d|e$", "",clinic$pathologic_T),0)
+ifelse(!is.null(clinic$pathologic_N),clinic$pathologic_N <- gsub("a|b|c|d|e$", "",clinic$pathologic_N),0)
+ifelse(!is.null(clinic$pathologic_M),clinic$pathologic_M <- gsub("a|b|c|d|e$", "",clinic$pathologic_M),0)
+clinic1 <- clinic
+for(k in colnames(clinic1)){
+  ifelse(class(clinic1[,k]) != "character" & length(na.omit(unique(clinic1[,k]))) != 0,
+         ifelse(length(na.omit(unique(clinic1[,k]))) < 5,clinic[,k] <- as.character(clinic[,k]),0),
+         ifelse(length(na.omit(unique(clinic1[,k]))) > 10 | length(na.omit(unique(clinic1[,k]))) <= 1,clinic <- clinic[,-grep(paste0("^",k,"$"),colnames(clinic))],0))
+}
+# 结合表型和分组数据
+clinic <- merge(cbind(clinic1,submitter_id = rownames(clinic1)),class)
+clinic$class <- factor(clinic$class)
+for(j in 2:(ncol(clinic)-1)){
+  tryCatch({
+    chiq <- rbind(chiq,data.frame(phenotype = colnames(clinic)[j],
+                                  chi_KW_p = ifelse(class(clinic[,j]) != "character",
+                                                    t.test(split(clinic[,j],clinic[,ncol(clinic)])[[1]],split(clinic[,j],clinic[,ncol(clinic)])[[2]])$p.value,
+                                                    fisher.test(table(clinic[,j],clinic[,ncol(clinic)]))$p.value),
+                                  phenames = str_c(names(table(clinic[,j])),collapse = ";"),
+                                  phenonum = ifelse(class(clinic[,j]) == "character",
+                                                    str_c(apply(table(clinic[,j],clinic[,ncol(clinic)]),2,function(x){str_c(x,collapse = '/')}),collapse = ";"),
+                                                    "Discrete")))
+    
+  },
+  error = function(e){cat("ERROR :",colnames(clinic)[j],":",conditionMessage(e),"\n")})
+}
+
+
+
+write.table(chiq,"3/chiq-gse.txt",sep = "\t",col.names = T,row.names = F,quote = F)
+
+clinic <- clinic[,c(1,4:7)]
+clinic1$sampleID <- gsub("-01","",clinic1$sampleID)
+clinic <- merge(clinic,clinic1[,c(1,105)],by.x = "submitter_id",by.y = "sampleID")
+clinic$pathologic_stage <- gsub("A|B","",clinic$pathologic_stage)
+clinic$pathologic_stage[clinic$pathologic_stage %in% c("Stage I","Stage II")] <- "Stage I&II"
+clinic$pathologic_stage[clinic$pathologic_stage %in% c("Stage III","Stage IV")] <- "Stage III&IV"
+clinic <- melt(clinic,variable.name = "Gene",value.name = "Expressed value")
+clinic$pathologic_stage[clinic$pathologic_stage == "[Discrepancy]"] <- NA
+clinic$`Expressed value`[clinic$`Expressed value` == 0] <- NA
+clinic$`Expressed value` <- log10(clinic$`Expressed value`)
+p <- ggplot(clinic,aes(x = Gene, y = `Expressed value`,fill = pathologic_stage))
+p + geom_boxplot(aes(color = pathologic_stage),outlier.size = 0.1,alpha = 0.7) +
+  geom_jitter(aes(color = pathologic_stage),alpha = 0.01) +
+  scale_fill_manual(values = c("#283c86","#45a247")) +
+  scale_color_manual(values = c("#283c86","#45a247")) +
+  scale_y_continuous(limits = c(0,60) ) +
+  theme(axis.text.x = element_text(size = 10),
+        axis.text.y = element_text(size = 10),
+        #legend.position = "top",
+        #legend.background = element_rect(fill="transparent", size=.5),
+        axis.line = element_line(size = 0.5, colour = "black"),
+        axis.title = element_blank(),
+        strip.background = element_blank(),
+        strip.text = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_blank(),
+        panel.grid = element_blank())
+ggsave("test.pdf",width = 10,height = 10)
+
+
+clinic$class <- as.factor(clinic$class)
+p <- ggplot(clinic,aes(x = pathologic_stage, fill = class))
+p + geom_bar(aes(color = class),alpha = 0.7,stat = 'count',position = 'dodge') +
+  #geom_jitter(aes(color = stage.tnm),alpha = 0.01) +
+  scale_fill_manual(values = c("#2F7336","#AA3A38")) +
+  scale_color_manual(values = c("#2F7336","#AA3A38")) +
+  theme(axis.text.x = element_text(size = 10),
+        axis.text.y = element_text(size = 10),
+        #legend.position = "top",
+        #legend.background = element_rect(fill="transparent", size=.5),
+        axis.line = element_line(size = 0.5, colour = "black"),
+        axis.title = element_blank(),
+        strip.background = element_blank(),
+        strip.text = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_blank(),
+        panel.grid = element_blank())
+
+ggsave("train.pdf",width = 10,height = 10)
+
+
+## ppi gene 在高低风险组的表达
+library(reshape2)
+library(ggplot2)
+genename <- c("KLHDC8B","ALK","KLK3","VAV3","UBE2C","UBE2S")
+genename <- c("ENSG00000185909","ENSG00000171094","ENSG00000142515","ENSG00000134215","ENSG00000175063","ENSG00000108106")
+mRNA <- read.table("f:/datahe/2/mRNA-LUAD1.txt",header=T,sep="\t",row.names = 1)
+rownames(mRNA) <- gsub("\\..*$","",rownames(mRNA))
+
+class <- read.table("f:/datahe/3/genematrix/expr-test/LUAD733.txt",header=T,sep="\t")
+class <- read.table("f:/datahe/3/genematrix/expr/LUAD-cox733.txt",header=T,sep="\t")
+high <- rownames(class)[class$class == 1]
+low <- rownames(class)[class$class == 0]
+mRNA <- mRNA[intersect(genename,rownames(mRNA)),]
+mRNA <- as.data.frame(t(mRNA))
+class <- class[intersect(rownames(class),rownames(mRNA)),]
+mRNA <- mRNA[intersect(rownames(class),rownames(mRNA)),]
+data <- cbind(mRNA,class)
+data <- data[,c(2:6,9:12,14)]
+data$class <- as.character(data$class)
+data <- melt(data,value.name = "expr",variable.name = "Gene")
+p <- ggplot(data,aes(x = Gene, y = expr,fill = class))
+p + geom_boxplot(aes(color = class),outlier.size = 0.1,alpha = 0.7) +
+  geom_jitter(aes(color = class),alpha = 0.01) +
+  scale_fill_manual(values = c("#2F7336","#AA3A38")) +
+  scale_color_manual(values = c("#2F7336","#AA3A38")) +
+  #scale_y_continuous(limits = c(0,60) ) +
+  theme(axis.text.x = element_text(size = 10),
+        axis.text.y = element_text(size = 10),
+        #legend.position = "top",
+        #legend.background = element_rect(fill="transparent", size=.5),
+        axis.line = element_line(size = 0.5, colour = "black"),
+        axis.title = element_blank(),
+        strip.background = element_blank(),
+        strip.text = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_blank(),
+        panel.grid = element_blank())
+ggsave("3/9-gene-log10-test.pdf",width = 10,height = 10)
+
+
+
+
+lowgroup <- mRNA[intersect(genename,rownames(mRNA)),low]
+fc <- as.data.frame(apply(highgroup,1,mean)/apply(lowgroup,1,mean))
+
+geneselect <- rownames(fc)[fc[,1] <=0.75|fc[,1] >=1.5]
+geneselectname <- gene_id$Gene.stable.ID[gene_id$Gene.name %in% geneselect]
+
+c1 <- c[c$V1 %in% geneselectname|c$V2 %in% geneselectname,]
+write.table(c1,file = "mi_mppi6.txt",quote = F,sep = "\t",col.names = T,row.names = F)
+
+
+a <- gene_id[gene_id$Gene.name %in% unique(c(c1$V1,c1$V2)),c(1,6)]
+rownames(a) <- a[,1]
+a$V2 <- fc[a$Gene.stable.ID,]
+
+
+
+
+
+
+
+clinicdata <- read.table("CNV-Cancer Browser/LUAD/clinical_data",header = T,sep = "\t",stringsAsFactors = F)
+## 处理clinicdata
+clinicdata$days_to_death[is.na(clinicdata$days_to_death)] <- clinicdata$days_to_last_followup[is.na(clinicdata$days_to_death)] 
+clinicdata$sampleID <- gsub("\\.01$","",gsub("-","\\.",clinicdata$sampleID))
+rownames(clinicdata) <-clinicdata$sampleID
+
+ifelse(!is.null(clinicdata$pathologic_stage),clinicdata$pathologic_stage <- gsub("A|B|C$", "",clinicdata$pathologic_stage),0)
+ifelse(!is.null(clinicdata$clinicdataal_stage),clinicdata$clinicdataal_stage <- gsub("A|B|C|A1|B1|C1|A2|B2|C2$","",clinicdata$clinicdataal_stage),0)
+ifelse(!is.null(clinicdata$pathologic_T),clinicdata$pathologic_T <- gsub("a|b|c|d|e$", "",clinicdata$pathologic_T),0)
+ifelse(!is.null(clinicdata$pathologic_N),clinicdata$pathologic_N <- gsub("a|b|c|d|e$", "",clinicdata$pathologic_N),0)
+ifelse(!is.null(clinicdata$pathologic_M),clinicdata$pathologic_M <- gsub("a|b|c|d|e$", "",clinicdata$pathologic_M),0)
+
+clinicdata$pathologic_stage[clinicdata$pathologic_stage == "Stage I"|clinicdata$pathologic_stage == "Stage II"] <- "Stage I&II"
+clinicdata$pathologic_stage[clinicdata$pathologic_stage == "Stage III"|clinicdata$pathologic_stage =="Stage IV"] <- "Stage III&IV"
+clinicdata$age[clinicdata$age_at_initial_pathologic_diagnosis >= 70] <- ">=70"
+clinicdata$age[clinicdata$age_at_initial_pathologic_diagnosis < 70] <- "<70"
+clinicdata$residual_tumor[clinicdata$residual_tumor == "R0"] <- "R0"
+clinicdata$residual_tumor[clinicdata$residual_tumor == "R1"|clinicdata$residual_tumor == "R2"|clinicdata$residual_tumor == "RX"] <- "R1&R2&RX"
+clinicdata$tobacco_smoking_history[clinicdata$tobacco_smoking_history == "Current reformed smoker for > 15 years"] <- "> 15 years"
+clinicdata$tobacco_smoking_history[clinicdata$tobacco_smoking_history == "Current reformed smoker for < or = 15 years"|
+                                     clinicdata$tobacco_smoking_history == "Current smoker"|
+                                     clinicdata$tobacco_smoking_history == "Current Reformed Smoker, Duration Not Specified"] <- "current"
+clinicdata$tobacco_smoking_history[clinicdata$tobacco_smoking_history == "Lifelong Non-smoker"] <- "never"
+clinicdata[clinicdata == ""] <- NA
+
+## train 表型
+clinictrain <- read.table("3/genematrix/expr/LUAD-cox733.txt",sep = "\t",header = T)
+clinictrain$sampleID <- rownames(clinictrain)
+clinictrain <- clinictrain[,c(1,2,8,9)]
+clinictrain <- merge(clinictrain,clinicdata)
+clinictrain$dataset <- "Training cohort"
+
+## test 表型
+clinictest <- read.table("3/genematrix/expr-test/LUAD733.txt",sep = "\t",header = T)
+clinictest$sampleID <- rownames(clinictest)
+clinictest <- clinictest[,c(1,2,8,9)]
+clinictest <- merge(clinictest,clinicdata)
+clinictest$dataset <- "Validation cohort"
+
+## gse 表型
+clinicgse <- read.table("3/genematrix/LUAD-gse-roc733-93194.txt",sep = "\t",header = T)
+clinicgse <- clinicgse[,c(6,8:10,12,13,16,18,20)]
+clinicgse$stage.tnm[clinicgse$stage.tnm == 1 | clinicgse$stage.tnm == 2] = "Stage I"
+clinicgse$stage.tnm[clinicgse$stage.tnm == 3 | clinicgse$stage.tnm == 4] = "Stage II"
+clinicgse$stage.tnm[clinicgse$stage.tnm == 5 | clinicgse$stage.tnm == 6] = "Stage III"
+clinicgse$stage.tnm[clinicgse$stage.tnm == 7] = "Stage IV"
+clinicgse$stage.tnm[clinicgse$stage.tnm %in% c("Stage I","Stage II")] <- "Stage I&II"
+clinicgse$stage.tnm[clinicgse$stage.tnm %in% c("Stage III","Stage IV")] <- "Stage III&IV"
+colnames(clinicgse)[grep("stage",colnames(clinicgse))] <- grep("stage",colnames(clinictrain),value = T)
+colnames(clinicgse)[grep("histology",colnames(clinicgse))] <- "histological_type"
+colnames(clinicgse)[grep("sample",colnames(clinicgse))] <- "sampleID"
+clinicgse$histological_type[clinicgse$histological_type == 3] = "Lung Adenocarcinoma- Not Otherwise Specified (NOS)"
+colnames(clinicgse)[grep("smoking",colnames(clinicgse))] <- "tobacco_smoking_history"
+clinicgse$tobacco_smoking_history[clinicgse$tobacco_smoking_history == 1] = "current"
+clinicgse$tobacco_smoking_history[clinicgse$tobacco_smoking_history == 2] = "> 15 years"
+clinicgse$tobacco_smoking_history[clinicgse$tobacco_smoking_history == 3] = "never"
+colnames(clinicgse)[grep("^age$",colnames(clinicgse))] <- "age_at_initial_pathologic_diagnosis"
+clinicgse$age[clinicgse$age_at_initial_pathologic_diagnosis >= 70] <- ">=70"
+clinicgse$age[clinicgse$age_at_initial_pathologic_diagnosis < 70] <- "<70"
+levels(clinicgse$gender) <- c("FEMALE","MALE")
+clinicgse$dataset <- "Independent cohort"
+
+## 合并
+clinic <- rbind(clinictrain,clinictest)
+clinic <- merge(clinic,clinicgse,all = T)
+clinic$class <- as.factor(clinic$class)
+clinic$dataset <- as.factor(clinic$dataset)
+## 画图
+for(i in c(5:10,12:172)){
+  if(class(clinic[,i]) == "character"){
+p <- ggplot(clinic,aes(x = dataset, fill = class,group = class))
+p + geom_bar(aes(y = (..count..)/sum(..count..),color = class),alpha = 0.7,stat = 'count',position = 'fill') +
+  #geom_jitter(aes(color = stage.tnm),alpha = 0.01) +
+  scale_fill_manual(values = c("#2F7336","#AA3A38")) +
+  scale_color_manual(values = c("#2F7336","#AA3A38")) +
+  facet_grid(.~clinic[,i]) +
+  geom_hline(aes(yintercept=0.5), colour="grey30", linetype="dashed") +
+  theme(axis.text.x = element_text(size = 10),
+        axis.text.y = element_text(size = 10),
+        #legend.position = "top",
+        #legend.background = element_rect(fill="transparent", size=.5),
+        axis.line = element_line(size = 0.5, colour = "black"),
+        axis.title = element_blank(),
+        strip.background = element_blank(),
+        #strip.text = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_blank(),
+        panel.grid = element_blank())
+
+ggsave(paste0("3/pheno/",colnames(clinic)[i],".pdf"),width = 10,height = 10)
+}
+}
+
+#### --------------------------------- cox --------------------------- ####
+setwd("f:/datahe")
+## gse
+class <- read.table("3/gse81089-last.txt",sep = "\t",header = T)
+clinic <- gse[,c(6,9,12,18,20)]
+clinic$stage.tnm[clinic$stage.tnm == 1 | clinic$stage.tnm == 2] = "Stage I"
+clinic$stage.tnm[clinic$stage.tnm == 3 | clinic$stage.tnm == 4] = "Stage II"
+clinic$stage.tnm[clinic$stage.tnm == 5 | clinic$stage.tnm == 6] = "Stage III"
+clinic$stage.tnm[clinic$stage.tnm == 7] = "Stage IV"
+clinic$stage.tnm[clinic$stage.tnm %in% c("Stage I","Stage II")] <- "Stage I&II"
+clinic$stage.tnm[clinic$stage.tnm %in% c("Stage III","Stage IV")] <- "Stage III&IV"
+clinic$class <- as.character(clinic$class)
+clinic1 <- clinic[,-3]
+clinic1$age[clinic$age >= 70] <- ">=70"
+clinic1$age[clinic$age < 70] <- "<70"
+clinic1[clinic1 == ""] <- NA
+cox <- summary(coxph(Surv(time,X_EVENT) ~ .,data = clinic1))
+
+
+##test
+clinic <- read.table("3/genematrix/expr-test/LUAD733.txt",sep = "\t",header = T)
+clinicdata <- read.table("CNV-Cancer Browser/LUAD/clinical_data",header = T,sep = "\t",stringsAsFactors = F)
+clinicdata <- clinicdata[,c("sampleID","age_at_initial_pathologic_diagnosis","residual_tumor",
+                            "pathologic_stage","days_to_death","days_to_last_followup")]
+clinicdata$days_to_death[is.na(clinicdata$days_to_death)] <- clinicdata$days_to_last_followup[is.na(clinicdata$days_to_death)] 
+clinicdata$sampleID <- gsub("\\.01$","",gsub("-","\\.",clinicdata$sampleID))
+clinic$sampleID <- rownames(clinic)
+clinic <- merge(clinic,clinicdata)
+clinic$pathologic_stage <- gsub("A|B$","",clinic$pathologic_stage)
+clinic$pathologic_stage[clinic$pathologic_stage %in% c("Stage I","Stage II")] <- "Stage I&II"
+clinic$pathologic_stage[clinic$pathologic_stage %in% c("Stage III","Stage IV")] <- "Stage III&IV"
+clinic$class <- as.character(clinic$class)
+clinic1 <- clinic[,c(2,9,12,13)]
+#clinic1$residual[clinic$residual_tumor == "R0"|clinic$residual_tumor == "R1"] <- "R0&R1"
+#clinic1$residual[clinic$residual_tumor == "R2"|clinic$residual_tumor == "RX"] <- "R2&RX"
+
+clinic1$residual[clinic$residual_tumor == "R0"] <- "R0"
+clinic1$residual[clinic$residual_tumor == "R2"] <- "R2"
+
+
+colnames(clinic1)[4] <- "time"
+for(i in 46:80){
+clinic1$age[clinic$age >= i] <- ">=54"
+clinic1$age[clinic$age < i] <- "<54"
+clinic1[clinic1 == ""] <- NA
+cox <- summary(coxph(Surv(time,X_EVENT) ~ .,data = clinic1))
+
+print(paste0(i,": ",summary(coxph(Surv(time,X_EVENT) ~ age,data = clinic1))$coefficients[,5]))}
+
+
+##train
+clinic <- read.table("3/clinictrain.txt",sep = "\t",header = T,row.names = 1)
+clinicdata <- read.table("CNV-Cancer Browser/LUAD/clinical_data",header = T,sep = "\t",stringsAsFactors = F)
+clinicdata <- clinicdata[,c("sampleID","age_at_initial_pathologic_diagnosis","residual_tumor",
+                            "pathologic_stage","days_to_death","days_to_last_followup")]
+clinicdata$days_to_death[is.na(clinicdata$days_to_death)] <- clinicdata$days_to_last_followup[is.na(clinicdata$days_to_death)] 
+clinicdata$sampleID <- gsub("-01$","",clinicdata$sampleID)
+clinic <- merge(clinic,clinicdata,by.x = "submitter_id",by.y = "sampleID")
+clinic$pathologic_stage <- gsub("A|B$","",clinic$pathologic_stage)
+clinic$pathologic_stage[clinic$pathologic_stage %in% c("Stage I","Stage II")] <- "Stage I&II"
+clinic$pathologic_stage[clinic$pathologic_stage %in% c("Stage III","Stage IV")] <- "Stage III&IV"
+clinic$class <- as.character(clinic$class)
+clinic1 <- clinic[,c(2,9,14,15)]
+#clinic1$residual[clinic$residual_tumor == "R0"|clinic$residual_tumor == "R1"] <- "R0&R1"
+#clinic1$residual[clinic$residual_tumor == "R2"|clinic$residual_tumor == "RX"] <- "R2&RX"
+
+clinic1$residual[clinic$residual_tumor == "R0"] <- "R0"
+clinic1$residual[clinic$residual_tumor == "R2"] <- "R2"
+
+
+colnames(clinic1)[4] <- "time"
+#for(i in 41:84){
+clinic1$age[clinic$age_at_initial_pathologic_diagnosis >= 54] <- ">=54"
+clinic1$age[clinic$age_at_initial_pathologic_diagnosis < 54] <- "<54"
+clinic1[clinic1 == ""] <- NA
+cox <- summary(coxph(Surv(time,X_EVENT) ~ .,data = clinic1))
+
+
+
+
+
+
+
+
+
+
+
+
+#### ----------------------------- 十折交叉验证 ---------------------- ####
+setwd("f:/datahe")
+library(caret)
+library(pROC)
+trainset <- read.table("3/clinictrain.txt",sep = "\t",header = T)
+rownames(trainset) <- trainset$submitter_id
+trainset <- trainset[,c(4:7,2)]
+set.seed(100000000.32)
+for(j in 1:100000){
+  tryCatch({
+    folds <- createFolds(y = trainset$class,k=10)
+    max = 0
+    num = 0
+    auc_value<-as.numeric()
+    
+    fold_test <- trainset[folds[[1]],]   #取folds[[i]]作为测试集
+    fold_train <- trainset[-folds[[1]],] # 剩下的数据作为训练集
+    fold_pre <- lm(as.numeric(class)~.,data=fold_train)
+    fold_predict <- predict(fold_pre,type='response',newdata=fold_test)
+    #roc_curve <- roc(as.numeric(fold_test$class),fold_predict)
+    #plot(roc_curve,print.auc=TRUE, main="ROC curve for the set with the median AUC value",col=brewer.pal(10, "Set3")[1])
+    auc_value <- append(auc_value,as.numeric(auc(as.numeric(fold_test$class),fold_predict)))
+    for(i in 2:10){
+      fold_test <- trainset[folds[[i]],]   #取folds[[i]]作为测试集
+      fold_train <- trainset[-folds[[i]],] # 剩下的数据作为训练集
+      fold_pre <- lm(as.numeric(class)~.,data=fold_train)
+      fold_predict <- predict(fold_pre,type='response',newdata=fold_test)
+      #roc_curve <- roc(as.numeric(fold_test$class),fold_predict)
+      #plot(roc_curve,add=T, print.auc=TRUE, main="ROC curve for the set with the median AUC value",col=brewer.pal(10, "Set3")[i])
+      auc_value <- append(auc_value,as.numeric(auc(as.numeric(fold_test$class),fold_predict)))
+    }
+    auc_value
+    if(mean(auc_value)>0.7&any(auc_value<0.9&auc_value>0.8)){break}
+  },
+  error = function(e){cat("ERROR :",conditionMessage(e),"\n")})
+
+}
+
+
+num <- order(auc_value)[5]
+
+fold_test <- trainset[folds[[num]],]
+fold_train <- trainset[-folds[[num]],]
+fold_pre <- lm(as.numeric(class)~.,data=fold_train)
+fold_predict <- predict(fold_pre,type='response',newdata=fold_test)
+roc_curve <- roc(as.numeric(fold_test$class),fold_predict)
+
+
+plot(roc_curve, print.auc=TRUE, main="ROC curve for the set with the median AUC value",col = "red")
+plot(roc_curve,print.auc=T, grid=c(0.1, 0.2),print.thres=F)
+
+
+fold_predict =ifelse(fold_predict>0.5,1,0)
+fold_test$predict = fold_predict
+fold_error = fold_test$predict-fold_test$class
+fold_accuracy = (nrow(fold_test)-sum(abs(fold_error)))/nrow(fold_test) 
+print(fold_accuracy)
+
+
+
+
+trainset <- read.table("3/clinictrain.txt",sep = "\t",header = T)
+rownames(trainset) <- trainset$submitter_id
+trainset <- trainset[,c(4:7,9)]
+
+
+
+
+
+#### ----------------------------- 生存分析 ----------------------------- ####
+library(survival)
+rm(list = ls())
+setwd("f:/datahe")
+#--导入的文件：临床数据：样本，性别，年龄，截尾事件,去掉正常样本
+clinic <- read.table(paste("CNV-Cancer Browser/LUAD/clinical_train_set73.txt",sep=""),sep="\t",header=T)
+p_value <- c()
+genesymbol <- c()
+#--导入的文件：lncRNA基因：1为高风险分类，0为低风险分类
+
+##train
+"ENSG00000253931.1"
+"ENSG00000232527.3"
+"hsa.mir.139"
+"ENSG00000185909.13"
+alldata <- read.table("3/clinictrain.txt",sep = "\t",header = T)
+alldata$class <- ifelse(alldata$ENSG00000185909.13<median(sort(alldata$ENSG00000185909.13)),"0","1")
+alldata <- clinic[clinic$pathologic_stage == "Stage III&IV",]
+dif <- survdiff(Surv(days_to_death,X_EVENT) ~ class,data = alldata)#求生存时间
+p_value <- pchisq(dif$chisq,1,lower.tail=F)
+
+kmsurvival <- survfit(Surv(days_to_death, X_EVENT) ~ class,data = alldata)
+
+pdf(paste("3/train-StageIII.IV.pdf",sep=""))
+plot(kmsurvival, lty = 1:1, col=c("springgreen4","red3"), 
+     xlab="Time", ylab="Survival Probability",
+     main=paste("LUAD survival analysis"),axes=T,mark.time = T,lwd = 2)
+#axis(1,c(0,20,40,60,80,100))
+#axis(2,c(0,0.2,0.4,0.6,0.8,1))
+legend(5,0.2, c("high survival","low survival"),
+       cex=0.8,bty="n",lty = 1:1,col=c("red3","springgreen4")) 
+text(1000,0.25,paste("p=",round(p_value,5),sep=""))
+text(2000,0.9,paste("N=",length(alldata$class),sep=""))
+text(2000,0.7,paste("n1=",length(alldata[alldata$class==1,1]),sep=""))
+text(2000,0.6,paste("n2=",length(alldata[alldata$class==0,1]),sep=""))
+dev.off()
+
+
+##test
+"ENSG00000253931.1"
+"ENSG00000232527.3"
+"hsa.mir.139"
+"ENSG00000185909.13"
+
+alldata <- read.table("clinictest.txt",sep = "\t",header = T)
+rownames(alldata) <- alldata$sampleID
+alldata$sampleID <- gsub("\\.","-",alldata$sampleID)
+alldata <- alldata[alldata1$submitter_id,]
+
+alldata1 <- read.table("3/clinictest.txt",sep = "\t",header = T)
+#alldata$class <- ifelse(alldata$ENSG00000253931.1<median(sort(alldata$ENSG00000253931.1)),"0","1")
+alldata <- alldata[alldata$pathologic_stage == "Stage I&II",]
+alldata <- alldata[alldata$pathologic_stage == "Stage III&IV",]
+  dif <- survdiff(Surv(days_to_death,X_EVENT) ~ class,data = alldata)#求生存时间
+  p_value <- pchisq(dif$chisq,1,lower.tail=F)
+
+kmsurvival <- survfit(Surv(days_to_death, X_EVENT) ~ class,data = alldata)
+
+pdf(paste("3/test-StageIII.IV.pdf",sep=""))
+pdf(paste("3/test-StageI.II.pdf",sep=""))
+#pdf(paste("3/test-ENSG00000253931.pdf",sep=""))
+plot(kmsurvival, lty = 1:1, col=c("springgreen4","red3"), 
+     xlab="Time", ylab="Survival Probability",
+     main=paste("LUAD survival analysis"),axes=T,mark.time = T,lwd = 2)
+#axis(1,c(0,20,40,60,80,100))
+#axis(2,c(0,0.2,0.4,0.6,0.8,1))
+legend(5,0.2, c("high survival","low survival"),
+       cex=0.8,bty="n",lty = 1:1,col=c("red3","springgreen4")) 
+text(1000,0.25,paste("p=",round(p_value,5),sep=""))
+text(1500,0.9,paste("N=",length(alldata$class),sep=""))
+text(1500,0.7,paste("n1=",length(alldata[alldata$class==1,1]),sep=""))
+text(1500,0.6,paste("n2=",length(alldata[alldata$class==0,1]),sep=""))
+dev.off()
+
+
+
+## gse
+"ENSG00000253931"
+"ENSG00000232527"
+"ENSG00000185909"
+
+alldata <- read.table("3/genematrix/LUAD-gse-roc733-93194.txt",sep = "\t",header = T)
+alldata$stage.tnm[alldata$stage.tnm == 1 | alldata$stage.tnm == 2] = "Stage I"
+alldata$stage.tnm[alldata$stage.tnm == 3 | alldata$stage.tnm == 4] = "Stage II"
+alldata$stage.tnm[alldata$stage.tnm == 5 | alldata$stage.tnm == 6] = "Stage III"
+alldata$stage.tnm[alldata$stage.tnm == 7] = "Stage IV"
+alldata$stage.tnm[alldata$stage.tnm %in% c("Stage I","Stage II")] <- "Stage I&II"
+alldata$stage.tnm[alldata$stage.tnm %in% c("Stage III","Stage IV")] <- "Stage III&IV"
+alldata1 <- alldata
+
+alldata <- alldata1[alldata1$stage.tnm == "Stage I&II",]
+alldata <- alldata1[alldata1$stage.tnm == "Stage III&IV",]
+
+#alldata$class <- ifelse(alldata$ENSG00000185909<median(sort(alldata$ENSG00000185909)),"0","1")
+dif <- survdiff(Surv(time,X_EVENT) ~ class,data = alldata)#求生存时间
+p_value <- pchisq(dif$chisq,1,lower.tail=F)
+
+kmsurvival <- survfit(Surv(time, X_EVENT) ~ class,data = alldata)
+
+
+pdf(paste("3/gse-StageIII.IV.pdf",sep=""))
+pdf(paste("3/gse-StageI.II.pdf",sep=""))
+#pdf(paste("3/gse-ENSG00000185909.pdf",sep=""))
+plot(kmsurvival, lty = 1:1, col=c("springgreen4","red3"), 
+     xlab="Time", ylab="Survival Probability",
+     main=paste("LUAD survival analysis"),axes=T,mark.time = T,lwd = 2)
+#axis(1,c(0,20,40,60,80,100))
+#axis(2,c(0,0.2,0.4,0.6,0.8,1))
+legend(5,0.2, c("high survival","low survival"),
+       cex=0.8,bty="n",lty = 1:1,col=c("red3","springgreen4")) 
+text(500,0.25,paste("p=",round(p_value,5),sep=""))
+text(500,0.9,paste("N=",length(alldata$class),sep=""))
+text(500,0.7,paste("n1=",length(alldata[alldata$class==1,1]),sep=""))
+text(500,0.6,paste("n2=",length(alldata[alldata$class==0,1]),sep=""))
+dev.off()
+
+
+
+#----miRNA----#
+library(survival)
+#求miRNA的log-rank检验的p-value
+#缺失值：在clinical_data文件中缺失的样本，分不成两类的样本
+rm(list = ls())
+setwd("f:/datahe")
+#--导入的文件：临床数据：样本，性别，年龄，截尾事件,去掉正常样本
+clinic1 <- read.table(paste("CNV-Cancer Browser/LUAD/clinical_train_set73.txt",sep=""),sep="\t",header=T)
+
+p_value <- c()
+genesymbol <- c()
+#--导入的文件：miRNA基因：1为高风险分类，0为低风险分类
+n <- "hsa-mir-139"
+  gene <- read.table(paste("3/miRNA/zhongzhi/0=2.3/LUAD73/",n,".txt",sep=""),sep="\t",header=T)
+  all.data <- merge(gene,clinic,by.x="sample",by.y="sampleID")
+  dif <- survdiff(Surv(all.data$time,all.data$X_EVENT) ~ all.data$class)#求生存时间
+  p_value <- pchisq(dif$chisq,1,lower.tail=F)
+  
+  kmsurvival <- survfit(Surv(time, X_EVENT) ~ class,data = all.data)
+  
+  pdf(paste("3/test1-hsa-mir-139.pdf",sep=""))
+  plot(kmsurvival, lty = 1:1, col=c("springgreen4","red3"), 
+       xlab="Time", ylab="Survival Probability",
+       main=paste("LUAD survival analysis"),axes=T,mark.time = T,lwd = 2)
+  #axis(1,c(0,20,40,60,80,100))
+  #axis(2,c(0,0.2,0.4,0.6,0.8,1))
+  legend(5,0.2, c("high survival","low survival"),
+         cex=0.8,bty="n",lty = 1:1,col=c("red3","springgreen4")) 
+  text(30,0.25,paste("p=",round(p_value,5),sep=""))
+  text(50,0.9,paste("N=",length(all.data$class),sep=""))
+  text(50,0.7,paste("n1=",length(all.data[all.data$class==1,1]),sep=""))
+  text(50,0.6,paste("n2=",length(all.data[all.data$class==0,1]),sep=""))
+  dev.off()
+  
+
+#----lncRNA----#
+library(survival)
+#求mRNA的log-rank检验的p-value
+#缺失值：在clinical_data文件中缺失的样本，分不成两类的样本
+setwd("f:/datahe")
+#--导入的文件：临床数据：样本，性别，年龄，截尾事件,去掉正常样本
+clinic <- read.table("CNV-Cancer Browser/LUAD/clinical_train_set73.txt",sep="\t",header=T)
+
+n="ENSG00000253931.1"
+n="ENSG00000232527.3"
+n="hsa.mir.139"
+n="ENSG00000185909.13"
+p_value <- c()
+genesymbol <- c()
+#--导入的文件：mRNA基因：1为高风险分类，0为低风险分类
+  gene <- read.table(paste("3/lncRNA/zhongzhi/0=2.3/LUAD73/",n,".txt",sep=""),sep="\t",header=T)
+  all.data <- merge(gene,clinic,by.x="sample",by.y="sampleID")
+  dif <- survdiff(Surv(all.data$time,all.data$X_EVENT)~all.data$class)#求生存时间
+  p_value <- pchisq(dif$chisq,1,lower.tail=F)
+  kmsurvival <- survfit(Surv(time, X_EVENT) ~ class,data = all.data)
+  
+  pdf(paste("3/test1-ENSG00000232527.pdf",sep=""))
+  plot(kmsurvival, lty = 1:1, col=c("springgreen4","red3"), 
+       xlab="Time", ylab="Survival Probability",
+       main=paste("LUAD survival analysis"),axes=T,mark.time = T,lwd = 2)
+  #axis(1,c(0,20,40,60,80,100))
+  #axis(2,c(0,0.2,0.4,0.6,0.8,1))
+  legend(5,0.2, c("high survival","low survival"),
+         cex=0.8,bty="n",lty = 1:1,col=c("red3","springgreen4")) 
+  text(30,0.25,paste("p=",round(p_value,5),sep=""))
+  text(50,0.9,paste("N=",length(all.data$class),sep=""))
+  text(50,0.7,paste("n1=",length(all.data[all.data$class==1,1]),sep=""))
+  text(50,0.6,paste("n2=",length(all.data[all.data$class==0,1]),sep=""))
+  dev.off()
+  
+
+  #----mRNA----#
+  library(survival)
+  #求mRNA的log-rank检验的p-value
+  #缺失值：在clinical_data文件中缺失的样本，分不成两类的样本
+  setwd("f:/datahe")
+  #--导入的文件：临床数据：样本，性别，年龄，截尾事件,去掉正常样本
+  clinic <- read.table("CNV-Cancer Browser/LUAD/clinical_test_set73.txt",sep="\t",header=T)
+  
+  n="ENSG00000253931.1"
+  n="ENSG00000232527.3"
+  n="hsa.mir.139"
+  n="ENSG00000185909.13"
+  p_value <- c()
+  genesymbol <- c()
+  #--导入的文件：mRNA基因：1为高风险分类，0为低风险分类
+  gene <- read.table(paste("3/mRNA/zhongzhi/LUAD73/",n,".txt",sep=""),sep="\t",header=T)
+  all.data <- merge(gene,clinic,by.x="sample",by.y="sampleID")
+  dif <- survdiff(Surv(all.data$time,all.data$X_EVENT)~all.data$class)#求生存时间
+  p_value <- pchisq(dif$chisq,1,lower.tail=F)
+  kmsurvival <- survfit(Surv(time, X_EVENT) ~ class,data = all.data)
+  
+  pdf(paste("3/test1-ENSG00000185909.pdf",sep=""))
+  plot(kmsurvival, lty = 1:1, col=c("springgreen4","red3"), 
+       xlab="Time", ylab="Survival Probability",
+       main=paste("LUAD survival analysis"),axes=T,mark.time = T,lwd = 2)
+  #axis(1,c(0,20,40,60,80,100))
+  #axis(2,c(0,0.2,0.4,0.6,0.8,1))
+  legend(5,0.2, c("high survival","low survival"),
+         cex=0.8,bty="n",lty = 1:1,col=c("red3","springgreen4")) 
+  text(30,0.25,paste("p=",round(p_value,5),sep=""))
+  text(50,0.9,paste("N=",length(all.data$class),sep=""))
+  text(50,0.7,paste("n1=",length(all.data[all.data$class==1,1]),sep=""))
+  text(50,0.6,paste("n2=",length(all.data[all.data$class==0,1]),sep=""))
+  dev.off()
+  
+  
+
+
+
